@@ -3,127 +3,46 @@ Object.assign(TOPIC_CONTENT, {
   "se_docker": `<main>
 <h1>Docker</h1>
   <div class="where"><span>Software Engineering</span><span>Docker</span></div>
-  <p class="lead">Docker packs a program, the exact Python version, every library and the operating-system files it needs into one sealed box called an image, and runs that box the same way on a laptop, in CI and on a cloud server. It is the standard way scripts, APIs and ML models are shipped, and Kubernetes and most MLOps tools are built on it. This note finishes the track's story: the chai stall's <code>sales_report.py</code> (tag <code>v1.0.0</code> from the Git note, run nightly on Linux in the Linux note) now has to save each day's totals into a Postgres database, and we containerise it, give it a small web board, and run it together with Postgres using Docker Compose. Every <code>docker</code> command below was really run (Docker Engine 29.8, Compose v5.6, as root in a sandbox; on your laptop you would be in the <code>docker</code> group) and its output pasted; the build folder is shown as <code>/home/meera/chai-docker</code>. Two honest limits of the sandbox: images could not be pulled from Docker Hub (rate limit), so only the locally present <code>python:3.12-slim</code>, <code>postgres:16-alpine</code> and <code>registry:2</code> were used; and builds had no direct internet, so the Python packages were downloaded once with <code>pip download</code> into a <code>wheels/</code> folder and installed from there (section 04 explains the one line this changes).</p>
+  <p class="lead">Docker is a tool that packs a program together with everything it needs in order to run (the right Python version, every library, the operating-system files underneath) into one sealed package called an <strong>image</strong>, and then runs that package in exactly the same way on a laptop, on a test server and in the cloud. It is the standard way scripts, web APIs and machine-learning models are shipped today, and Kubernetes and most CI/CD systems are built on top of it, so you will meet it in almost every real job. The running example continues the story of this track: the chai stall's <code>sales_report.py</code>, versioned in the Git note and run every night on a Linux server in the Linux note, gets a new job. It must now save each day's total into a PostgreSQL database, and on the way we will package it, give it a small web page and run it next to its database. One honest note about the demos: the machine this page was prepared on has the <code>docker</code> command but no Docker engine running, so Docker's own commands are shown without output and the text tells you what they print. Everything else, including the Linux features that containers are actually made of, was really run and its output is pasted as printed.</p>
 
-  <h2 id="sd-fits" class="open"><span class="num">★</span>Where this fits</h2>
-  <figure class="viz"><svg viewBox="0 0 660 200" width="660">
-<defs><marker id="sd-a0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="220" y="8" width="220" height="34" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="330" y="30" text-anchor="middle" font-size="12">Software Engineering track</text>
-<line x1="330" y1="42" x2="115" y2="70" stroke="currentColor" stroke-opacity="0.45"/><line x1="330" y1="42" x2="330" y2="70" stroke="currentColor" stroke-opacity="0.45"/><line x1="330" y1="42" x2="545" y2="70" stroke="currentColor" stroke-opacity="0.45"/>
-<rect x="20" y="72" width="190" height="52" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="115" y="93" text-anchor="middle" font-size="12">1 · Git &amp; GitHub</text><text x="115" y="111" text-anchor="middle" class="tm" font-size="10">script versioned, tag v1.0.0</text>
-<rect x="235" y="72" width="190" height="52" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="330" y="93" text-anchor="middle" font-size="12">2 · Linux &amp; Terminal</text><text x="330" y="111" text-anchor="middle" class="tm" font-size="10">cron, logs, env vars, signals</text>
-<rect x="450" y="72" width="190" height="52" rx="7" class="fg sg" stroke-width="2.5"/><text x="545" y="93" text-anchor="middle" font-size="12" font-weight="700">3 · Docker</text><text x="545" y="111" text-anchor="middle" class="tg" font-size="10">YOU ARE HERE · ship it + Postgres</text>
-<line x1="210" y1="98" x2="233" y2="98" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#sd-a0)"/><line x1="425" y1="98" x2="448" y2="98" stroke="currentColor" stroke-dasharray="3 3" marker-end="url(#sd-a0)"/>
-<text x="330" y="152" text-anchor="middle" class="tm" font-size="10.5">image chai-report:1.0 = python:3.12-slim + psycopg 3.3.6 + sales_report.py, board.py, save_report.py</text>
-<text x="330" y="172" text-anchor="middle" class="tm" font-size="10.5">compose.yaml: db (Postgres + volume) · report (saves ₹230 into daily_sales) · board (port 8080)</text>
-</svg><figcaption>The last step of the track: the same script, now packed with its whole environment and run next to its database.</figcaption></figure>
-  <ol class="story">
-    <li><b>Came from: <a class="xref" data-note="se_linux">Linux &amp; Terminal</a></b><span>The report runs every night by cron on one server. That note gave us everything a container is made of: processes and PIDs, signals and exit codes (137, 143), environment variables, ports, file ownership. Left open: the next feature (save totals into Postgres) needs a library and a database server that the server does not have, and setting up every new machine by hand is exactly the "works on my machine" problem. <a class="xref" data-note="py_modules">Virtual environments</a> isolate Python packages, but not Python itself, system libraries or a database.</span></li>
-    <li><b>This note adds: packaging the whole environment</b><span>What a container is, images vs containers, Dockerfiles and the layer cache, build and run, ports and volumes, environment and config, Docker Compose with Postgres, registries and tags, multi-stage builds, and the production traps (<code>:latest</code>, secrets in images, running as root).</span></li>
-    <li><b>Leads to</b><span><a class="xref" data-note="mlops_deploy">CI/CD, serving and Kubernetes</a> (which schedule exactly these images), <a class="xref" data-note="api_production">production backends</a> (gunicorn/uvicorn in containers, health checks) and <a class="xref" data-note="sql_relational">PostgreSQL</a> itself.</span></li>
-  </ol>
-
-  <h2 id="sd-ladder" class="open"><span class="num">?</span>The Question Ladder</h2>
-  <p>The whole note as one chain. Each idea answers the question above it; its weakness raises the next. Running example: the chai report and its new job, saving Monday's ₹230 (6 valid orders, 3 rejected) into a <code>daily_sales</code> table.</p>
-  <ol class="story">
-    <li><b>Works on my machine</b><span>Q: why does the new version fail on the server? → Different Python, missing <code>psycopg</code>, no Postgres running, no <code>DATABASE_URL</code>. We need to ship the environment, not just the code. But what exactly would we ship?</span></li>
-    <li><b>What a container is</b><span>Q: is it a small virtual machine? → No: an ordinary Linux process with its own view of files, PIDs, hostname and network (namespaces) and resource limits (cgroups), sharing the host kernel. Starts in under a second. Where do its files come from?</span></li>
-    <li><b>Image vs container</b><span>Q: what is the box, and what is the running thing? → Image = read-only template (class); container = a running instance with a thin writable layer (object). A file written in a container vanished with it. How is an image made?</span></li>
-    <li><b>Dockerfile, layer by layer</b><span>Q: how do we describe the image? → One instruction per line, each a cached layer; change one and it and every later layer rebuild. Copy requirements first, code last: a code edit rebuilt in 0.4 s instead of re-installing packages. How do we use the image?</span></li>
-    <li><b>Build &amp; run</b><span>Q: how do we start it, override its command, stop it cleanly? → <code>docker build</code>, <code>docker run</code>, <code>logs</code>, <code>exec</code>, <code>stop</code>; exec-form commands stop in under a second, shell form waited 10 s and died with 137. But the box is sealed: how does the outside world reach in?</span></li>
-    <li><b>Ports &amp; volumes</b><span>Q: how do we reach a server inside, and keep data? → <code>-p 8080:8000</code> opens a door (and the app must listen on 0.0.0.0); <code>-v</code> mounts host folders (read-only data) and named volumes (data that outlives containers). How do we configure the same image differently?</span></li>
-    <li><b>Env &amp; config</b><span>Q: how does one image get dev vs prod settings and secrets? → <code>-e</code>, <code>--env-file</code> at run time; <code>save_report.py</code> without <code>DATABASE_URL</code> stops with KeyError. Now we need a database container too, connected and started in order…</span></li>
-    <li><b>Docker Compose: app + db</b><span>Q: how do several containers run together? → One <code>compose.yaml</code>: services find each other by name (<code>db:5432</code>, never <code>localhost</code>), healthchecks order start-up, a volume keeps the table across <code>down</code>/<code>up</code>. How does the server get our image?</span></li>
-    <li><b>Registries &amp; tags</b><span>Q: how do images travel? → Tag, push to a registry, pull elsewhere; tags are movable labels, digests are exact content. <code>:latest</code> pointed at two different images within a minute. Images are also bigger than they need to be…</span></li>
-    <li><b>Multi-stage builds &amp; small images</b><span>Q: how do we ship only what runs? → Build in one stage, copy the result into a clean final stage (no wheel files, non-root user); a file deleted in a later layer still costs 100 MB. What else bites in production?</span></li>
-    <li><b>Production traps</b><span>Q: what goes wrong after it works? → <code>:latest</code> drift, secrets baked into layers (readable with <code>docker history</code>), containers running as root (files on the host owned by root), memory limits (exit 137).</span></li>
-  </ol>
-
-  <h2 id="sd-map" class="open"><span class="num">★</span>Mind Map</h2>
+  <h2 id="sd-map"><span class="num">★</span>Mind Map</h2>
   <div class="mindmap">
     <div class="mm-center">Docker</div>
     <div class="mm-branches">
       <div class="mm-branch">
-        <div class="mm-title">Why &amp; what</div>
+        <div class="mm-title">What a container is</div>
         <ul>
-          <li><b>Problem</b> — Python 3.13 vs 3.12, no psycopg, no Postgres, no env var</li>
-          <li><b>Container</b> = process + namespaces (own PIDs, files, hostname, network) + cgroups (limits)</li>
-          <li><b>Not a VM</b> — same kernel (<code>uname -r</code> identical), starts in &lt; 1 s</li>
-          <li><b>vs venv</b> — venv isolates Python packages only</li>
-          <li>💡 shipping container: every crane handles the same box</li>
+          <li>An ordinary process, fenced off by the kernel</li>
+          <li><b>Namespaces</b>: own PIDs, hostname, network, mounts</li>
+          <li><b>cgroups</b>: limits on memory and CPU</li>
+          <li>Shares the host kernel, so it is not a VM</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Image vs container</div>
+        <div class="mm-title">Images and builds</div>
         <ul>
-          <li><b>Image</b> — read-only layers + config (class); <code>docker images</code>, <code>rmi</code></li>
-          <li><b>Container</b> — instance + writable layer (object); <code>docker ps -a</code>, <code>rm</code></li>
-          <li><code>docker diff</code> shows a container's changes</li>
-          <li>⚠ container writes vanish with the container</li>
+          <li><b>Image</b>: read-only stack of layers + settings</li>
+          <li><b>Container</b>: image + writable layer + process</li>
+          <li>Dockerfile: one layer per instruction</li>
+          <li>Cache: a changed step rebuilds it and every step after it</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Dockerfile &amp; cache</div>
+        <div class="mm-title">Plugging in at run time</div>
         <ul>
-          <li><code>FROM</code>, <code>WORKDIR</code>, <code>COPY</code>, <code>RUN</code>, <code>ENV</code>, <code>USER</code>, <code>EXPOSE</code>, <code>CMD</code></li>
-          <li>Each instruction = layer; a change rebuilds it + all after it</li>
-          <li>Order: FROM → requirements → RUN pip → code last</li>
-          <li><code>.dockerignore</code>: .git, .venv, data/, .env</li>
-          <li><code>docker history</code>: size per layer</li>
+          <li><code>-p 8080:8000</code>: host port to container port; app listens on 0.0.0.0</li>
+          <li><code>-v</code>: bind mounts and named volumes outlive the container</li>
+          <li><code>-e</code>, <code>--env-file</code>: settings and secrets</li>
+          <li>Compose: services find each other by name</li>
         </ul>
       </div>
       <div class="mm-branch">
-        <div class="mm-title">Build &amp; run</div>
+        <div class="mm-title">Shipping safely</div>
         <ul>
-          <li><code>docker build -t chai-report:1.0 .</code></li>
-          <li><code>docker run --rm IMG [cmd]</code>; <code>-d</code>, <code>--name</code>; exit codes pass through</li>
-          <li><code>logs</code>, <code>exec</code>, <code>top</code>, <code>ps</code>, <code>stop</code> (TERM, KILL after 10 s), <code>rm</code></li>
-          <li>Exec form <code>["python","board.py"]</code> → app is PID 1; shell form → <code>sh</code> is PID 1 → 137</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Ports &amp; volumes</div>
-        <ul>
-          <li><code>-p 8080:8000</code> = host:container</li>
-          <li>⚠ app must bind <code>0.0.0.0</code>, not 127.0.0.1 → "connection reset"</li>
-          <li>Bind mount <code>-v "$PWD/data":/data:ro</code> · named volume <code>-v chai-out:/out</code></li>
-          <li>💡 container = hotel room cleaned at checkout; volume = locker in the lobby</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Env &amp; config</div>
-        <ul>
-          <li><code>-e KEY=val</code>, <code>--env-file chai.env</code>, Compose <code>environment:</code></li>
-          <li>Same image, different settings per environment</li>
-          <li>Required: <code>os.environ["DATABASE_URL"]</code> → KeyError if missing</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Compose</div>
-        <ul>
-          <li><code>services</code>: db, report, board; <code>volumes: pgdata</code></li>
-          <li>Service name = DNS name: <code>db:5432</code></li>
-          <li><code>healthcheck</code> + <code>depends_on: service_healthy</code></li>
-          <li><code>up -d</code>, <code>ps -a</code>, <code>logs</code>, <code>exec</code>, <code>run --rm</code>, <code>down</code> (keeps volumes), <code>down -v</code> (deletes)</li>
-          <li>⚠ <code>localhost</code> inside a container = itself</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Registries</div>
-        <ul>
-          <li>tag → push → pull; <code>host/name:tag</code></li>
-          <li>Tag = movable label; digest <code>sha256:…</code> = exact content</li>
-          <li>Docker Hub, ghcr.io, ECR, Artifact Registry</li>
-          <li>⚠ <code>:latest</code> = default tag, moves</li>
-        </ul>
-      </div>
-      <div class="mm-branch">
-        <div class="mm-title">Small &amp; safe</div>
-        <ul>
-          <li>Multi-stage: <code>FROM … AS builder</code> → <code>COPY --from=builder</code></li>
-          <li>Slim base; <code>--no-cache-dir</code>; create + delete in one RUN</li>
-          <li><code>USER app</code>; no secrets in ENV/COPY; pin versions</li>
-          <li><code>-m 100m</code> → OOM → 137</li>
+          <li>Registry: push and pull; tag = label, digest = exact content</li>
+          <li>Multi-stage builds ship only what runs</li>
+          <li>No secrets in layers; run as a non-root user</li>
+          <li>Exec-form <code>CMD</code> so <code>docker stop</code> is clean</li>
         </ul>
       </div>
     </div>
@@ -132,37 +51,32 @@ Object.assign(TOPIC_CONTENT, {
   <div class="roadmap-wrap">
     <h2 class="roadmap-title">What we'll cover</h2>
     <div class="roadmap-grid">
-      <div class="rm-item rm-done" data-target="sd-ladder"><span class="rm-num">?</span><div class="rm-text"><span class="rm-label">The Question Ladder</span><span class="rm-sub">The note as one chain</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Works on My Machine</span><span class="rm-sub">The problem</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-what"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">What a Container Is</span><span class="rm-sub">Process + isolation, not a VM</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-img"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Image vs Container</span><span class="rm-sub">Class vs object</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-file"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">Dockerfile Layer by Layer</span><span class="rm-sub">The cache, traced</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-run"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">Build &amp; Run</span><span class="rm-sub">Commands, PID 1, stop</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-ports"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Ports &amp; Volumes</span><span class="rm-sub">Doors and lockers</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-env"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Env &amp; Config</span><span class="rm-sub">One image, many settings</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-compose"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Compose: App + Postgres</span><span class="rm-sub">Networking by name</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-reg"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Registries &amp; Tags</span><span class="rm-sub">push, pull, digests</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-small"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Multi-Stage &amp; Small Images</span><span class="rm-sub">Ship only what runs</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-best"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Production Traps</span><span class="rm-sub">latest, secrets, root</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-connect"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">How It All Connects</span><span class="rm-sub">One picture, one table</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">The usual "why doesn't it work"</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">The note in 15 minutes</span></div></div>
-      <div class="rm-item rm-done" data-target="sd-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Questions &amp; Answers</span><span class="rm-sub">Including connection questions</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-why"><span class="rm-num">01</span><div class="rm-text"><span class="rm-label">Works on My Machine</span><span class="rm-sub">why shipping only the code fails</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-what"><span class="rm-num">02</span><div class="rm-text"><span class="rm-label">What a Container Is</span><span class="rm-sub">a fenced-off process, not a small computer</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-img"><span class="rm-num">03</span><div class="rm-text"><span class="rm-label">Images, Layers and Containers</span><span class="rm-sub">where a container's files come from</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-file"><span class="rm-num">04</span><div class="rm-text"><span class="rm-label">The Dockerfile</span><span class="rm-sub">the recipe that builds an image</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-cache"><span class="rm-num">05</span><div class="rm-text"><span class="rm-label">The Build Cache</span><span class="rm-sub">why the order of instructions matters</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-run"><span class="rm-num">06</span><div class="rm-text"><span class="rm-label">Running Containers</span><span class="rm-sub">run, logs, exec, stop, and PID 1</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-ports"><span class="rm-num">07</span><div class="rm-text"><span class="rm-label">Ports and Container Networking</span><span class="rm-sub">letting the outside world in</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-vol"><span class="rm-num">08</span><div class="rm-text"><span class="rm-label">Volumes and Bind Mounts</span><span class="rm-sub">files that come in or must survive</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-env"><span class="rm-num">09</span><div class="rm-text"><span class="rm-label">Configuration with Environment Variables</span><span class="rm-sub">one image, many settings</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-compose"><span class="rm-num">10</span><div class="rm-text"><span class="rm-label">Docker Compose</span><span class="rm-sub">the app and Postgres in one file</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-reg"><span class="rm-num">11</span><div class="rm-text"><span class="rm-label">Registries, Tags and Digests</span><span class="rm-sub">how images travel between machines</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-small"><span class="rm-num">12</span><div class="rm-text"><span class="rm-label">Small, Safe Images</span><span class="rm-sub">multi-stage builds, secrets, non-root</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-traps"><span class="rm-num">13</span><div class="rm-text"><span class="rm-label">Common Mistakes</span><span class="rm-sub">the usual "why doesn't it work"</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-rev"><span class="rm-num">R</span><div class="rm-text"><span class="rm-label">Revision Sheet</span><span class="rm-sub">definitions, commands, gotchas</span></div></div>
+      <div class="rm-item rm-done" data-target="sd-qa"><span class="rm-num">14</span><div class="rm-text"><span class="rm-label">Interview Questions</span><span class="rm-sub">the questions interviewers ask on Docker</span></div></div>
     </div>
   </div>
 
-  <h2 id="sd-why"><span class="num">01</span>The Problem: "It Works on My Machine"</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The owner wants every day's totals kept in a database, so she can compare weeks. Meera writes <code>save_report.py</code>, which reads a sheet and writes one row into a Postgres table. It works on her laptop. Why will it fail on the stall's server, and on the next server, and on Ravi's laptop?</p>
-  </div>
-  <p>The new script (it repeats the report's counting so it stays independent of the tagged <code>sales_report.py</code>):</p>
+  <h2 id="sd-why"><span class="num">01</span>Works on My Machine</h2>
+  <p>The stall's owner wants every day's totals kept in a database so that she can compare one week with the next. Meera writes a new script, <code>save_report.py</code>, that reads one day's order sheet, counts the valid orders exactly as the report does, and writes one row into a PostgreSQL table called <code>daily_sales</code>:</p>
   <div class="fx" data-lang="py">import csv, os, sys
 import psycopg
 
 day = sys.argv[1]                                  # e.g. 2026-10-19
-sheet = f"/data/orders_{day}.csv"
 total = orders = rejected = 0
-with open(sheet, newline="") as f:
+with open(f"/data/orders_{day}.csv", newline="") as f:
     for row in csv.DictReader(f):
         try:
             qty, price = int(row["qty"]), int(row["price"])
@@ -183,313 +97,233 @@ with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         orders = EXCLUDED.orders, rejected = EXCLUDED.rejected""",
         (day, total, orders, rejected))
 print(f"saved {day}: ₹{total} from {orders} valid orders, rejected: {rejected}")</div>
-  <p>It needs four things from its surroundings: Python, the <code>psycopg</code> library (Postgres driver), a running Postgres server, and a <code>DATABASE_URL</code> environment variable. Here is the server from the Linux note checked for all four:</p>
+  <p>The interesting part is not the counting but what the script quietly expects from the machine it runs on. It needs a Python interpreter. It needs the <code>psycopg</code> library, which is the driver that lets Python talk to Postgres. It needs a Postgres server to be running somewhere it can reach. And it needs an <strong>environment variable</strong> called <code>DATABASE_URL</code> that says where that server is and what password to use (environment variables are named settings a process receives when it starts; the Linux note covers them). On Meera's laptop all four happen to be in place, so the script works. Here is the stall's server checked for the same four things:</p>
   <div class="fx" data-lang="text">$ python3 --version
-Python 3.13.16
-$ python3 -c "import psycopg"
-Traceback (most recent call last):
-  File "&lt;string&gt;", line 1, in &lt;module&gt;
-    import psycopg
+Python 3.13.18
+$ python3 -c "import psycopg" 2&gt;&amp;1 | tail -n 1
 ModuleNotFoundError: No module named 'psycopg'
 $ pg_isready -h localhost
 localhost:5432 - no response
-$ echo "DATABASE_URL=\${DATABASE_URL:-&lt;not set&gt;}"
-DATABASE_URL=&lt;not set&gt;</div>
-  <table class="tbl">
-    <tr><th></th><th>Meera's laptop</th><th>Server (checked above)</th></tr>
-    <tr><td>Python</td><td>3.12</td><td>3.13.16</td></tr>
-    <tr><td>psycopg</td><td>installed in her venv</td><td>ModuleNotFoundError</td></tr>
-    <tr><td>Postgres server</td><td>running locally</td><td>no response on 5432</td></tr>
-    <tr><td>DATABASE_URL</td><td>in her <code>.bashrc</code></td><td>not set</td></tr>
-  </table>
-  <p>Each row is fixable by hand, and each new machine needs the same fixes again, slightly differently every time. Docker's idea: do not ship just the code. Ship the code <em>plus its whole environment</em> (OS files, the exact Python, every library, default settings) as one sealed box, and run the database as another box. The server only needs Docker.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A shipping container. Before containers, every port loaded sacks, barrels and crates differently, and things broke. Now every crane, ship and truck handles the same steel box and does not care what is inside. The report is the cargo; Docker is the standard box.</p>
-  </div>
-  <div class="flow"><span>Dockerfile (recipe)</span><span>docker build</span><span>Image (sealed box)</span><span>docker run anywhere</span><span>Container (running)</span></div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>"Works on my machine"</strong>: a program depends on things outside its code (interpreter version, libraries, system packages, services, environment variables) that differ between machines. <strong>Containerisation</strong>: packaging the program with those dependencies into an image that runs identically wherever a container runtime exists.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"A virtualenv solves this." It isolates Python <em>packages</em>, but still uses the machine's Python interpreter and system libraries, and it cannot start a Postgres server. Docker pins all of it.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: What a Container Is.</b> "Ship the environment" sounds like shipping a whole computer. Is a container a small virtual machine?</div>
+$ printenv DATABASE_URL || echo "DATABASE_URL is not set"
+DATABASE_URL is not set</div>
+  <p>Every line is a different reason for the same script to fail. The server has Python 3.13 where Meera tested with 3.12, <code>import psycopg</code> fails because the library was never installed there, <code>pg_isready</code> (a small tool that asks "is a Postgres server answering on this address?") gets no response on port 5432, and the environment variable does not exist. Each one can be fixed by hand, but the fixes must be repeated on every new machine, slightly differently each time, and the next person will forget one. This is the famous "it works on my machine" problem: a program depends on many things outside its own code (see <a class="xref" data-note="cf_programs">From Code to a Running Program</a> for what a program's dependencies are), and those things differ between machines.</p>
+  <p>You may know that a <a class="xref" data-note="py_modules">virtual environment</a> isolates Python packages for one project. It helps with the second line only. A virtual environment still uses whatever Python interpreter and system libraries the machine has, and it certainly cannot start a database server. What we really want is to ship not just the code but the code <em>together with its whole environment</em>: the operating-system files, the exact Python version, every library and sensible default settings, all sealed into one package that behaves identically wherever it runs. That idea is called <strong>containerisation</strong>, and Docker is the tool that made it everyday practice.</p>
+  <p>The name comes from shipping. Before standard steel containers, every port loaded sacks, barrels and crates in its own way, and goods were damaged or lost at every transfer. Once everything travelled in the same steel box, every crane, ship and lorry in the world could handle it without caring what was inside. Docker does the same for software: the report and its environment are the cargo, the image is the standard box, and any machine that has Docker can run it. The workflow you will see throughout this page has three steps. You write a recipe called a <strong>Dockerfile</strong>; <code>docker build</code> turns the recipe into an <strong>image</strong>, the sealed package; and <code>docker run</code> starts a <strong>container</strong> from that image, which is the program actually running. Before we write any recipe, though, we need to understand what a container really is, because the answer surprises most people.</p>
 
-  <h2 id="sd-what"><span class="num">02</span>What a Container Is: a Process, Not a VM</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>If a container contains "a whole operating system", why does it start in under a second and weigh megabytes? What is actually running when a container runs?</p>
-  </div>
-  <p>A <strong>virtual machine</strong> emulates a whole computer and boots its own kernel: gigabytes, minutes to start. A <strong>container</strong> is an ordinary Linux process (the Linux note's section 07) that the host kernel <em>fences off</em>: it gets its own view of the filesystem, process list, hostname and network (Linux <strong>namespaces</strong>) and limits on CPU and memory (<strong>cgroups</strong>). It shares the host's kernel. Proof, step by step:</p>
-  <div class="fx" data-lang="text">$ grep PRETTY /etc/os-release; uname -r
-PRETTY_NAME="Ubuntu 24.04.5 LTS"
-6.18.44-fc-v139
-$ docker run --rm python:3.12-slim sh -c 'grep PRETTY /etc/os-release; uname -r; python --version'
-PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
-6.18.44-fc-v139
-Python 3.12.15
-$ docker run -d --name sleeper python:3.12-slim sleep 300
-792b852b5ec00187b4d255f226b9782226a82509a341e9e5e72ddbc8d6131091
-$ docker exec sleeper sh -c 'ls /proc | grep -E "^[0-9]+$"; cat /proc/1/cmdline | tr "\\0" " "; echo'
-1
-13
-14
-7
-sleep 300 
-$ docker top sleeper -o pid,args
-PID                 COMMAND
-12117               sleep 300
-$ docker exec sleeper hostname
-792b852b5ec0
-$ hostname
+  <h2 id="sd-what"><span class="num">02</span>What a Container Is</h2>
+  <p>"Ship the whole environment, including operating-system files" sounds like shipping an entire computer. The older way of doing exactly that is a <strong>virtual machine</strong> (VM): software that pretends to be a complete computer, with its own virtual hardware and its own operating-system kernel that boots up just like a real one (<a class="xref" data-note="cf_cloud">Virtualization, Cloud &amp; Performance</a> explains VMs in detail). VMs work, but each one carries a full operating system, takes gigabytes of disk and needs tens of seconds or minutes to boot. Containers start in well under a second and are often only tens of megabytes on top of a shared base. So a container cannot be a small VM. What is it?</p>
+  <p>A <strong>container</strong> is an ordinary process (a running program, as described in <a class="xref" data-note="cf_os">Operating Systems</a>) that the Linux kernel has fenced off so that it sees its own private little world. Two kernel features do the fencing. A <strong>namespace</strong> gives a process its own private copy of something that is normally shared by the whole machine: the PID namespace gives it its own list of processes, the UTS namespace its own hostname, the network namespace its own network cards, and the mount namespace its own view of which folders exist. A <strong>cgroup</strong> (control group) puts limits on how much memory and CPU a group of processes may use. A container is simply a process started inside a fresh set of namespaces, inside a cgroup, with its own folder of files as its root directory. It still runs on the host's one and only kernel; nothing is emulated.</p>
+  <p>Think of flats in one apartment building compared with separate houses. Each flat has its own front door, its own rooms and its own name on the bell, and the people inside cannot see into the other flats. But all the flats share the building's foundation, water pipes and electricity. Separate houses, the VMs, each have their own foundation: more private, but much more expensive to build. Containers are the flats, and the shared foundation is the kernel.</p>
+  <p>On a normal machine you would see this through Docker. Docker is split into two programs: the <code>docker</code> command you type is only a <strong>client</strong>, and it sends each request over a local socket to the <strong>Docker daemon</strong> (<code>dockerd</code>), a background service that does the real work of building images and starting containers. On the machine used for this page the daemon is not running, which the first command below shows. That turns out to be useful, because it lets us build a container by hand from the very same kernel features Docker uses, with the standard Linux tool <code>unshare</code>, which starts a program inside new namespaces:</p>
+  <div class="fx" data-lang="text">$ docker ps
+failed to connect to the docker API at unix:///var/run/docker.sock; check if the path is correct and if the daemon is running: dial unix /var/run/docker.sock: connect: no such file or directory
+$ hostname; uname -r
 vm
-$ readlink /proc/$(docker inspect -f '{{.State.Pid}}' sleeper)/ns/pid /proc/self/ns/pid
-pid:[4026532267]
+6.18.44-fc-v653
+$ readlink /proc/self/ns/pid /proc/self/ns/uts /proc/self/ns/net
 pid:[4026531836]
-$ docker rm -f sleeper
-sleeper
-$ time docker run --rm python:3.12-slim true
-took 0.299s
-$ docker run --rm -m 100m python:3.12-slim cat /sys/fs/cgroup/memory/memory.limit_in_bytes
-104857600</div>
-  <p>Read it. Inside, the OS files say Debian and Python is 3.12; the host is Ubuntu with Python 3.13. But <code>uname -r</code> (the kernel) is identical: the container borrowed the host's kernel. The container <code>sleeper</code> sees only a handful of PIDs, and PID 1 is <code>sleep 300</code>; <code>docker top</code> shows that same process on the host with an ordinary large PID: one process, two views. Its hostname is its container ID, not <code>vm</code>. The two <code>readlink</code> lines show different PID-namespace numbers for the container's process and for our shell. A full container start-to-finish took well under a second. Finally <code>-m 100m</code> became a cgroup memory limit of 104857600 bytes (100 × 1024 × 1024), the limit the Linux note's OOM demo hit.</p>
-  <div class="cards">
-    <div><b>Virtual machine</b><p>Full guest OS + own kernel. GBs, boots in minutes. Strong isolation.</p></div>
-    <div><b>Container</b><p>Isolated process sharing the host kernel. MBs, starts in under a second.</p></div>
-    <div><b>virtualenv</b><p>Isolates Python packages only, not Python or system libraries.</p></div>
-  </div>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Flats in one building versus separate houses. Each flat (container) has its own door, rooms and name plate, but all share the building's foundation, water and electricity (the kernel). A separate house (VM) has its own foundation: more private, much more expensive to build.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Container</strong>: a process (tree) isolated with namespaces (pid, mnt, net, uts, ipc, user) and limited by cgroups, started from an image's filesystem. On Mac/Windows, Docker Desktop runs a small Linux VM underneath, because containers need a Linux kernel.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"Docker makes my app secure." Not by itself: containers share the kernel, so isolation is weaker than a VM, and a container running as root with extra privileges can harm the host (section 11).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Image vs Container.</b> The container's Debian files came from <code>python:3.12-slim</code>. What is that thing, and what happens to files a container writes?</div>
+uts:[4026531838]
+net:[4026531833]
+$ ps -e --no-headers | wc -l
+82
+$ unshare --pid --uts --net --fork --mount-proc sh -c 'hostname chai-box; hostname; uname -r; readlink /proc/self/ns/pid /proc/self/ns/uts /proc/self/ns/net; ps -e'
+chai-box
+6.18.44-fc-v653
+pid:[4026532267]
+uts:[4026532266]
+net:[4026532268]
+    PID TTY          TIME CMD
+      1 ?        00:00:00 sh
+      6 ?        00:00:00 ps
+$ hostname
+vm</div>
+  <p>The first line is the error every Docker user meets sooner or later: the client tried to reach the daemon through the socket file <code>/var/run/docker.sock</code> and nobody was there. Whenever you see "cannot connect to the Docker daemon", the problem is the background service, not your command. Next we look at the host: its hostname is <code>vm</code>, its kernel version is <code>6.18.44-fc-v653</code>, and <code>readlink</code> shows the identity numbers of the PID, UTS and network namespaces our shell lives in. About 80 processes are running on the machine.</p>
+  <p>Then <code>unshare</code> starts a shell in a new PID, UTS and network namespace (<code>--mount-proc</code> just makes <code>ps</code> read the new process list). Inside, we set the hostname to <code>chai-box</code> and it sticks; yet the final <code>hostname</code>, run back on the host afterwards, still says <code>vm</code>, because the change happened in a private copy. The namespace numbers inside are all different from the host's. <code>ps -e</code> inside sees only two processes, and the shell we started is <strong>PID 1</strong>, the first process of its own little world, even though on the host it has an ordinary large PID. But <code>uname -r</code> prints exactly the same kernel version inside and outside: there is only one kernel, and the "container" borrowed it. That is the whole trick behind Docker. When you run <code>docker run</code>, the daemon does what we just did, plus two more steps you will see in the next sections: it gives the process its own root filesystem built from the image, and it places it in a cgroup, so that <code>docker run -m 100m</code>, for example, becomes a memory limit of 100 MB that the kernel enforces by killing the process (exit code 137) if it goes over, as the Linux note's out-of-memory demo showed.</p>
+  <p>Two consequences are worth remembering. First, because containers need a Linux kernel, Docker Desktop on a Mac or Windows laptop quietly runs one small Linux VM and starts all your containers inside it. Second, sharing the kernel makes containers lighter than VMs but also less isolated: a bug in the kernel, or a container started with extra privileges, can affect the host. Containers are a packaging and isolation tool, not a complete security boundary on their own.</p>
 
-  <h2 id="sd-img"><span class="num">03</span>Image vs Container</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p><code>docker rm</code> vs <code>docker rmi</code>, <code>docker ps</code> vs <code>docker images</code>: the commands make no sense until the two words are separated. What is the template, what is the running copy, and where do a container's writes go?</p>
-  </div>
-  <p>The <strong>image</strong> is the sealed, read-only box: a stack of filesystem layers plus settings (default command, env, user). A <strong>container</strong> is one running (or stopped) instance made from it, with a thin <strong>writable layer</strong> of its own on top. Many containers can start from one image; none of them changes it.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A recipe printed in a book vs the dishes you cook. The page (image) never changes. Each dish (container) is made from it; adding salt to one dish touches neither the book nor the other dishes. Throw a dish away and cook again: it comes out exactly like the recipe. In OOP words, image = class, container = object.</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
+  <h2 id="sd-img"><span class="num">03</span>Images, Layers and Containers</h2>
+  <p>Our hand-made container still saw the host's files. A Docker container instead sees Debian's files, a particular Python and our scripts, even on an Ubuntu host. Those files come from the <strong>image</strong>. An image is a read-only template for containers: a stack of filesystem <strong>layers</strong> plus a little metadata, such as the default command to run, default environment variables and the user to run as. A layer is the set of file changes (files added, changed or deleted) produced by one step of the build. The bottom layer might hold Debian's basic files, the next one Python, the next one the installed libraries, and the top one our scripts.</p>
+  <p>A container is one running copy made from an image. When Docker starts a container, it stacks the image's layers into a single view of a filesystem and adds one extra, initially empty, <strong>writable layer</strong> on top that belongs only to that container. Everything the container writes goes into its own writable layer; the image's layers are never changed. So many containers can start from the same image at the same time, each with its own writable layer, and the layers underneath are stored on disk only once. A good analogy is a recipe printed in a book and the dishes cooked from it: the printed page never changes, each dish is made from it, and adding salt to one dish affects neither the book nor the other dishes. If you know <a class="xref" data-note="py_oop">OOP</a>, an image is like a class and a container like an object created from it.</p>
+  <figure class="viz"><svg viewBox="0 0 600 240" width="600">
     <defs><marker id="sd-arr1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="10" y="45" width="170" height="70" rx="8" class="fb sb"/><text x="95" y="73" text-anchor="middle">chai-report:1.0</text><text x="95" y="95" text-anchor="middle" class="tm">read-only layers</text>
-    <rect x="330" y="10" width="250" height="40" rx="8" class="fg sg"/><text x="455" y="35" text-anchor="middle">report (runs once, exits)</text>
-    <rect x="330" y="60" width="250" height="40" rx="8" class="fg sg"/><text x="455" y="85" text-anchor="middle">board :8080 (runs all day)</text>
-    <rect x="330" y="110" width="250" height="40" rx="8" class="fg sg"/><text x="455" y="135" text-anchor="middle">a one-off test</text>
-    <g stroke="currentColor" fill="none" stroke-width="1.5"><line x1="182" y1="70" x2="326" y2="30" marker-end="url(#sd-arr1)"/><line x1="182" y1="80" x2="326" y2="80" marker-end="url(#sd-arr1)"/><line x1="182" y1="90" x2="326" y2="130" marker-end="url(#sd-arr1)"/></g>
-    <text x="255" y="155" text-anchor="middle" class="tm">docker run</text>
-  </svg><figcaption>One image, many containers (exactly what Compose does in section 08). Each container adds its own writable layer.</figcaption></figure>
-  <p>Worked example: container <code>tmp1</code> writes a report file; we ask Docker what it changed; we delete it; a brand-new container looks for the file.</p>
-  <div class="fx" data-lang="text">$ docker images python
-IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
-python:3.12-slim   a6e34c598f24        179MB         45.4MB        
-$ docker run --name tmp1 python:3.12-slim sh -c 'echo "Total sales: ₹230" &gt; /tmp/report.txt; cat /tmp/report.txt'
-Total sales: ₹230
-$ docker ps -a --filter name=tmp1 --format '{{.Names}}  {{.Image}}  {{.Status}}'
-tmp1  python:3.12-slim  Exited (0) Less than a second ago
-$ docker diff tmp1
-C /tmp
-A /tmp/report.txt
-$ docker rm tmp1
-tmp1
-$ docker run --rm python:3.12-slim cat /tmp/report.txt
-cat: /tmp/report.txt: No such file or directory</div>
-  <p><code>docker images</code> lists images (here the 179 MB base). <code>docker ps -a</code> lists containers, including stopped ones. <code>docker diff</code> lists the writable layer's changes: <code>A</code> added, <code>C</code> changed folder. After <code>docker rm</code> that layer is gone, so the next container starts from the clean image and the file does not exist. That is a feature: every start is identical. Data you want to keep goes into a volume (section 06).</p>
-  <table class="tbl">
-    <tr><th></th><th>Image</th><th>Container</th></tr>
-    <tr><td>Is</td><td>Read-only template (layers + config)</td><td>Running or stopped instance + writable layer</td></tr>
-    <tr><td>OOP analogy</td><td>Class</td><td>Object</td></tr>
-    <tr><td>Made by</td><td><code>docker build</code> / <code>docker pull</code></td><td><code>docker run</code></td></tr>
-    <tr><td>List</td><td><code>docker images</code></td><td><code>docker ps -a</code></td></tr>
-    <tr><td>Delete</td><td><code>docker rmi</code></td><td><code>docker rm</code></td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Image</strong>: ordered stack of read-only layers plus metadata, identified by a sha256 ID. <strong>Container</strong>: image + writable layer + running process with its own namespaces.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>"I fixed it inside the container with <code>docker exec</code> and <code>pip install</code>." That fix lives in one container's writable layer and vanishes on the next deploy. Put every change in the Dockerfile and rebuild.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Dockerfile, Layer by Layer.</b> <code>python:3.12-slim</code> has Python but not psycopg or our scripts. How do we make our own image, and why are some rebuilds instant and others slow?</div>
+    <rect x="20" y="20" width="290" height="32" rx="4" class="fr sr" stroke-dasharray="5 3"/><text x="165" y="41" text-anchor="middle">container's writable layer (report.txt, whiteouts)</text>
+    <rect x="20" y="62" width="290" height="30" rx="4" class="fb sb"/><text x="165" y="82" text-anchor="middle">layer: our scripts (/app)</text>
+    <rect x="20" y="97" width="290" height="30" rx="4" class="fb sb"/><text x="165" y="117" text-anchor="middle">layer: installed libraries (psycopg)</text>
+    <rect x="20" y="132" width="290" height="30" rx="4" class="fs"/><text x="165" y="152" text-anchor="middle">layer: Python 3.12</text>
+    <rect x="20" y="167" width="290" height="30" rx="4" class="fs"/><text x="165" y="187" text-anchor="middle">layer: Debian base files</text>
+    <line x1="330" y1="62" x2="330" y2="197" stroke="currentColor"/><text x="340" y="134" class="tm">image: read-only, shared</text>
+    <rect x="430" y="70" width="155" height="90" rx="8" class="fg sg"/><text x="507" y="105" text-anchor="middle">merged view</text><text x="507" y="125" text-anchor="middle" class="tm">what the process</text><text x="507" y="141" text-anchor="middle" class="tm">sees as "/"</text>
+    <line x1="312" y1="36" x2="426" y2="90" stroke="currentColor" stroke-width="1.5" marker-end="url(#sd-arr1)"/>
+    <text x="165" y="222" text-anchor="middle" class="tm">a file is looked up from the top layer down; the first match wins</text>
+  </svg><figcaption>A container's filesystem: the image's read-only layers with one writable layer on top, merged into one view.</figcaption></figure>
+  <p>Read the figure from the top. When the process opens a file, the system looks for it in the writable layer first, then in each image layer going down, and uses the first copy it finds. When the process changes a file that lives in an image layer, the file is first copied up into the writable layer and changed there; this is called <strong>copy-on-write</strong>. And because image layers can never be modified, deleting a file is recorded by putting a special marker called a <strong>whiteout</strong> in the writable layer, which hides the file underneath. On Linux, Docker implements all of this with a kernel feature called <strong>overlay</strong> (Docker's "overlay2" storage driver). Since it is a plain kernel feature, we can use it directly. Below, three folders play the part of three image layers, and an overlay mount stacks them for a container called <code>c1</code>. (Mounting needs administrator rights; the demo ran as root inside a private mount namespace, so nothing on the machine itself changed.)</p>
+  <div class="fx" data-lang="text">$ find layer1-base layer2-deps layer3-app -type f
+layer1-base/etc/os-release
+layer1-base/usr/local/bin/python3.12
+layer2-deps/usr/local/lib/python3.12/site-packages/psycopg/__init__.py
+layer3-app/app/sample_orders.csv
+layer3-app/app/sales_report.py
+$ mkdir -p c1/upper c1/work c1/merged
+$ mount -t overlay overlay -o lowerdir=layer3-app:layer2-deps:layer1-base,upperdir=c1/upper,workdir=c1/work c1/merged
+$ ls c1/merged c1/merged/app
+c1/merged:
+app
+etc
+usr
 
-  <h2 id="sd-file"><span class="num">04</span>Dockerfile, Layer by Layer</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We need an image = Python 3.12 + psycopg + our three scripts + the sample sheet, rebuilt every time the code changes. How do we write that recipe, and how do we keep rebuilds fast?</p>
-  </div>
-  <p>A <strong>Dockerfile</strong> is a plain-text recipe, one instruction per line, run top to bottom. The build folder holds the scripts, the pinned requirements, a <code>.dockerignore</code> and the downloaded wheels:</p>
-  <div class="fx" data-lang="text">$ cat Dockerfile
-FROM python:3.12-slim
+c1/merged/app:
+sales_report.py
+sample_orders.csv
+$ python3 c1/merged/app/sales_report.py c1/merged/app/sample_orders.csv 2&gt;/dev/null | head -n 1
+Total sales: ₹230 from 6 valid orders, rejected: 3
+$ echo "Total sales: ₹230" &gt; c1/merged/app/report.txt
+$ rm c1/merged/app/sample_orders.csv
+$ ls c1/merged/app
+report.txt
+sales_report.py
+$ ls -l c1/upper/app
+total 4
+-rw-r--r-- 1 root root   20 Nov 19 05:51 report.txt
+c--------- 2 root root 0, 0 Nov 19 05:51 sample_orders.csv
+$ ls layer3-app/app
+sales_report.py
+sample_orders.csv
+$ umount c1/merged
+$ mkdir -p c2/upper c2/work c2/merged
+$ mount -t overlay overlay -o lowerdir=layer3-app:layer2-deps:layer1-base,upperdir=c2/upper,workdir=c2/work c2/merged
+$ ls c2/merged/app
+sales_report.py
+sample_orders.csv</div>
+  <p>The <code>find</code> shows what each "layer" holds: the base files, a stand-in for the installed library, and our real script and sample sheet. The <code>mount -t overlay</code> line stacks them: <code>lowerdir</code> lists the read-only layers from top to bottom, <code>upperdir</code> is the container's writable layer, <code>workdir</code> is scratch space the kernel needs, and <code>merged</code> is the single combined view. Listing <code>c1/merged</code> shows <code>app</code>, <code>etc</code> and <code>usr</code> side by side, even though they come from three different folders, and the real report runs from inside it and prints ₹230.</p>
+  <p>Then the "container" writes a new file and deletes the sample sheet. The merged view now shows <code>report.txt</code> and no sample. Look at where those changes went: <code>c1/upper/app</code> holds the new <code>report.txt</code>, and a strange entry for <code>sample_orders.csv</code> whose type is <code>c</code> (a character device with number 0, 0). That is the whiteout marker. Meanwhile the layer folder <code>layer3-app/app</code> still has both original files, untouched. Finally we throw away <code>c1</code>, the equivalent of <code>docker rm</code>, and start <code>c2</code> from the same three layers with a fresh, empty writable layer: the sample sheet is back and <code>report.txt</code> is gone. This is exactly why a file written inside a container disappears when the container is removed, and also why every container starts in exactly the same clean state. Data that must survive needs a volume, which section 08 covers.</p>
+  <p>With a Docker daemon you would inspect the same things with a few commands. They are shown here without output:</p>
+  <div class="fx" data-lang="text">$ docker images                 # list images on this machine
+$ docker ps -a                  # list containers, including stopped ones
+$ docker diff tmp1              # what container tmp1 changed in its writable layer
+$ docker rm tmp1                # delete a container (and its writable layer)
+$ docker rmi chai-report:1.0    # delete an image</div>
+  <p><code>docker images</code> prints one line per image with its name, tag, ID and size, for example <code>python</code> with tag <code>3.12-slim</code> at around 180 MB on disk. <code>docker ps -a</code> prints one line per container with its ID, the image it came from, its command and a status such as <code>Up 5 minutes</code> or <code>Exited (0) 2 seconds ago</code>. <code>docker diff</code> prints the writable layer's changes, one path per line, marked <code>A</code> for added, <code>C</code> for changed and <code>D</code> for deleted, which is the same information we just saw in the <code>upper</code> folder. Keep the two deletion commands apart: <code>rm</code> removes containers, <code>rmi</code> removes images.</p>
+
+  <h2 id="sd-file"><span class="num">04</span>The Dockerfile</h2>
+  <p>Now we can make our own image: the official Python 3.12 image, plus psycopg, plus our three scripts and the sample sheet. The recipe for an image is a plain-text file called <strong>Dockerfile</strong>, with one instruction per line, run from top to bottom. Each instruction that changes files produces one layer. Here is the stall's Dockerfile, followed by the two small files that go with it, the pinned requirements and the <code>.dockerignore</code>:</p>
+  <div class="fx" data-lang="text">FROM python:3.12-slim
 WORKDIR /app
-COPY wheels/ /wheels/
 COPY requirements.txt .
-RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 COPY sales_report.py board.py save_report.py sample_orders.csv ./
-CMD ["python", "sales_report.py", "sample_orders.csv"]
-$ cat requirements.txt
-psycopg[binary]==3.3.6
-typing-extensions==4.16.0
-$ cat .dockerignore
-.git
+CMD ["python", "sales_report.py", "sample_orders.csv"]</div>
+  <div class="fx" data-lang="text">psycopg[binary]==3.3.6
+typing-extensions==4.16.0</div>
+  <div class="fx" data-lang="text">.git
 .venv
 __pycache__/
 data/
 out/
 .env
+*.env
 *.log</div>
-  <table class="tbl">
-    <tr><th>Instruction</th><th>Meaning</th></tr>
-    <tr><td><code>FROM python:3.12-slim</code></td><td>Start from the official Debian + Python 3.12 image (slim = without compilers and docs)</td></tr>
-    <tr><td><code>WORKDIR /app</code></td><td><code>cd /app</code> for all later steps and for the container (created if missing)</td></tr>
-    <tr><td><code>COPY src dst</code></td><td>Copy files from the <strong>build context</strong> (this folder minus .dockerignore) into the image</td></tr>
-    <tr><td><code>RUN …</code></td><td>Run a shell command at build time; its file changes become a layer</td></tr>
-    <tr><td><code>CMD [...]</code></td><td>Default command when a container starts (overridable)</td></tr>
-    <tr><td><code>ENV</code>, <code>USER</code>, <code>EXPOSE</code></td><td>Default env vars, the user to run as, documentation of the listening port (sections 07, 10, 11)</td></tr>
-  </table>
-  <p>About the wheels: with internet access the RUN line would simply be <code>RUN pip install --no-cache-dir -r requirements.txt</code>. This sandbox's builds had no internet, so <code>pip download</code> fetched the exact wheels into <code>wheels/</code> beforehand and <code>--no-index --find-links=/wheels</code> tells pip to install only from that folder (a normal technique for offline builds). Note <code>typing-extensions</code> is pinned too: the first build attempt failed because psycopg needs it on Python 3.12, a small lesson in pinning <em>all</em> dependencies.</p>
-  <p>Now the idea that decides build speed: <strong>layers and the cache</strong>. Each instruction produces a layer, and Docker remembers it keyed by the instruction and its inputs (for COPY, the files' contents). On the next build, an unchanged step is reused (<code>CACHED</code>). The first changed step and <em>every step after it</em> are rebuilt.</p>
-  <figure class="viz"><svg viewBox="0 0 600 220" width="600">
-    <rect x="20" y="180" width="300" height="30" rx="4" class="fs"/><text x="170" y="200" text-anchor="middle">1 FROM python:3.12-slim</text>
-    <rect x="20" y="145" width="300" height="30" rx="4" class="fs"/><text x="170" y="165" text-anchor="middle">2 WORKDIR /app</text>
-    <rect x="20" y="110" width="300" height="30" rx="4" class="fb sb"/><text x="170" y="130" text-anchor="middle">3-4 COPY wheels/, requirements.txt</text>
-    <rect x="20" y="75" width="300" height="30" rx="4" class="fb sb"/><text x="170" y="95" text-anchor="middle">5 RUN pip install (slow, 32 MB)</text>
-    <rect x="20" y="40" width="300" height="30" rx="4" class="fr sr"/><text x="170" y="60" text-anchor="middle">6 COPY *.py sample (changes often)</text>
-    <text x="345" y="60" class="tr">edit code → rebuild only this</text><text x="345" y="95" class="tg">CACHED ✓</text><text x="345" y="130" class="tg">CACHED ✓</text><text x="345" y="165" class="tg">CACHED ✓</text><text x="345" y="200" class="tg">CACHED ✓</text>
-    <text x="170" y="25" text-anchor="middle" class="tm">CMD (metadata, no files)</text>
-  </svg><figcaption>Each instruction is a layer; a changed layer invalidates everything above it, so rarely-changing steps go first.</figcaption></figure>
-  <p>Traced for real. First build (every step runs; the repeated FROM progress lines are trimmed to "..."):</p>
-  <div class="fx" data-lang="text">$ time docker build --progress=plain -t chai-report:1.0 . 2&gt;&amp;1 | grep -E '^#[0-9]+ (\\[|DONE|CACHED|naming)'
-#1 [internal] load build definition from Dockerfile
-#1 DONE 0.0s
-#2 [internal] load metadata for docker.io/library/python:3.12-slim
-#2 DONE 0.0s
-#3 [internal] load .dockerignore
-#3 DONE 0.0s
-#4 [internal] load build context
-#4 DONE 0.1s
-#5 [1/6] FROM docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
-#5 DONE 1.4s
-...
-#6 [2/6] WORKDIR /app
-#6 DONE 0.2s
-#7 [3/6] COPY wheels/ /wheels/
-#7 DONE 0.0s
-#8 [4/6] COPY requirements.txt .
-#8 DONE 0.0s
-#9 [5/6] RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt
-#9 DONE 2.1s
-#10 [6/6] COPY sales_report.py board.py save_report.py sample_orders.csv ./
-#10 DONE 0.0s
-#11 naming to docker.io/library/chai-report:1.0 done
-#11 DONE 1.6s
-took 6.308s</div>
-  <p>Second build with nothing changed, then a one-line edit to <code>sales_report.py</code>:</p>
-  <div class="fx" data-lang="text">$ time docker build --progress=plain -t chai-report:1.0 . 2&gt;&amp;1 | grep -E '^#[0-9]+ (\\[|DONE|CACHED)'
-#1 [internal] load build definition from Dockerfile
-#1 DONE 0.0s
-#2 [internal] load metadata for docker.io/library/python:3.12-slim
-#2 DONE 0.0s
-#3 [internal] load .dockerignore
-#3 DONE 0.0s
-#4 [internal] load build context
-#4 DONE 0.0s
-#5 [1/6] FROM docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
-#5 DONE 0.0s
-#6 [2/6] WORKDIR /app
-#6 CACHED
-#7 [4/6] COPY requirements.txt .
-#7 CACHED
-#8 [3/6] COPY wheels/ /wheels/
-#8 CACHED
-#9 [5/6] RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt
-#9 CACHED
-#10 [6/6] COPY sales_report.py board.py save_report.py sample_orders.csv ./
-#10 CACHED
-#11 DONE 0.1s
-took 0.293s
-$ echo "# shown on the stall's phone" &gt;&gt; sales_report.py
-$ time docker build --progress=plain -t chai-report:1.0 . 2&gt;&amp;1 | grep -E '^#[0-9]+ (\\[|DONE|CACHED)'
-#1 [internal] load build definition from Dockerfile
-#1 DONE 0.0s
-#1 [internal] load build definition from Dockerfile
-#1 DONE 0.0s
-#2 [internal] load metadata for docker.io/library/python:3.12-slim
-#2 DONE 0.0s
-#3 [internal] load .dockerignore
-#3 DONE 0.0s
-#4 [internal] load build context
-#4 DONE 0.0s
-#5 [1/6] FROM docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
-#5 DONE 0.0s
-#6 [2/6] WORKDIR /app
-#6 CACHED
-#7 [3/6] COPY wheels/ /wheels/
-#7 CACHED
-#8 [4/6] COPY requirements.txt .
-#8 CACHED
-#9 [5/6] RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt
-#9 CACHED
-#10 [6/6] COPY sales_report.py board.py save_report.py sample_orders.csv ./
-#10 DONE 0.1s
-#11 DONE 0.1s
-took 0.365s</div>
-  <p>Unchanged: every step <code>CACHED</code>, a fraction of a second. After the edit, steps 2–5 are still <code>CACHED</code> and only step 6 (<code>COPY sales_report.py …</code>) ran, because its input changed and it is the last step. Now the same edit with a "bad" Dockerfile that copies the whole folder first:</p>
-  <div class="fx" data-lang="text">$ cat Dockerfile.bad
-FROM python:3.12-slim
+  <p>Read the Dockerfile line by line. <code>FROM python:3.12-slim</code> chooses the <strong>base image</strong> to build on, here the official image containing Debian and Python 3.12; "slim" means a variant without compilers and documentation, which makes it several hundred megabytes smaller than the full one. <code>WORKDIR /app</code> creates the folder <code>/app</code> and makes it the current directory for every later instruction and for the running container, like a permanent <code>cd</code>. <code>COPY requirements.txt .</code> copies one file from your project folder into the image. <code>RUN pip install ...</code> runs a command <em>while the image is being built</em>, and whatever files that command creates (here, the installed libraries) become a new layer; <code>--no-cache-dir</code> stops pip from keeping its download cache inside the image, where it would only waste space. The second <code>COPY</code> brings in our scripts. Finally <code>CMD</code> is not run during the build at all: it records the default command that a container should run when it starts, here the report on the baked-in sample sheet.</p>
+  <p>A few other instructions appear in almost every real Dockerfile. <code>ENV NAME=value</code> sets a default environment variable inside the image. <code>USER app</code> makes the container run as that user instead of the administrator. <code>EXPOSE 8000</code> records which port the program listens on, purely as documentation. <code>ENTRYPOINT</code> is a relative of <code>CMD</code> that section 06 explains. Sections 07, 09 and 12 show each of these in use.</p>
+  <p>Where do the files for <code>COPY</code> come from? When you run <code>docker build</code>, the client first packs up the folder you name (usually <code>.</code>, the current folder) and sends it to the daemon. That bundle is called the <strong>build context</strong>, and <code>COPY</code> can only see files inside it. The <code>.dockerignore</code> file lists paths that are left out of the context entirely, which matters for three reasons: it keeps secrets such as <code>.env</code> files from ever reaching an image, it keeps big folders like <code>.git</code>, <code>.venv</code> and <code>data/</code> from slowing every build, and it stops irrelevant changes from invalidating the cache, as the next section explains. The requirements file pins exact versions with <code>==</code>. Note that it pins <code>typing-extensions</code> too, a library psycopg itself needs; pinning only your direct dependencies leaves the indirect ones free to change between builds, so the "same" Dockerfile can produce a different image next month.</p>
+  <p>Building and inspecting the image looks like this (no output shown, since there is no daemon here):</p>
+  <div class="fx" data-lang="text">$ docker build -t chai-report:1.0 .
+$ docker history chai-report:1.0</div>
+  <p><code>-t chai-report:1.0</code> gives the image a name and a tag (a version label), and the final <code>.</code> is the build context. While building, Docker prints one numbered line per instruction, such as <code>[1/5] FROM docker.io/library/python:3.12-slim</code> and <code>[3/5] RUN pip install --no-cache-dir -r requirements.txt</code>, each followed by how long it took, and ends with a line like <code>naming to docker.io/library/chai-report:1.0</code>. <code>docker history</code> then lists the image's layers from newest to oldest with the size each one adds: about 0 B for <code>CMD</code> (it only changes metadata), a few kilobytes for our scripts, and tens of megabytes for the <code>pip install</code> layer, sitting on top of the base image's own layers. You can already see that the expensive layer is the libraries, not our code. That observation leads directly to the most important performance idea in Docker.</p>
+
+  <h2 id="sd-cache"><span class="num">05</span>The Build Cache</h2>
+  <p>During development you rebuild the image every time you change the code, often dozens of times a day. If every rebuild reinstalled every library, a project using numpy, pandas or PyTorch would wait minutes for each one-line change. Docker avoids this with the <strong>build cache</strong>: after building a layer, it remembers the result, and on the next build it reuses any layer whose inputs have not changed.</p>
+  <p>The rule for "has not changed" is precise and worth learning exactly. For each instruction Docker computes a <strong>cache key</strong> from three things: the layer underneath it (its parent), the text of the instruction, and, for <code>COPY</code>, a checksum of the contents of the files being copied. If a layer with the same key already exists, it is reused and the build prints <code>CACHED</code> for that step. Because every key includes its parent, the moment one step misses the cache, every step after it misses as well, since their parent is now new. A stack of rotis is a good picture: to replace the top one you lift off just that one, but to replace the bottom one you have to take off every roti above it and put them all back.</p>
+  <p>The program below is a small model of that rule, not Docker itself: it reads our two candidate Dockerfiles, computes a key for each step as just described, and reports which steps a second build would reuse after a one-line edit to <code>sales_report.py</code>. The "bad" Dockerfile differs only in using <code>COPY . .</code> (copy the whole folder) before installing the libraries:</p>
+  <div class="fx" data-lang="text">FROM python:3.12-slim
 WORKDIR /app
 COPY . .
-RUN pip install --no-cache-dir --no-index --find-links=/app/wheels -r requirements.txt
-CMD ["python", "sales_report.py", "sample_orders.csv"]
-$ echo "# shown on the stall's phone" &gt;&gt; sales_report.py
-$ time docker build --progress=plain -f Dockerfile.bad -t chai-bad . 2&gt;&amp;1 | grep -E '^#[0-9]+ (\\[|DONE|CACHED)'
-#1 [internal] load build definition from Dockerfile.bad
-#1 DONE 0.0s
-#2 [internal] load metadata for docker.io/library/python:3.12-slim
-#2 DONE 0.0s
-#3 [internal] load .dockerignore
-#3 DONE 0.0s
-#4 [1/4] FROM docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
-#4 DONE 0.0s
-#5 [internal] load build context
-#5 DONE 0.0s
-#6 [2/4] WORKDIR /app
-#6 CACHED
-#7 [3/4] COPY . .
-#7 DONE 0.3s
-#8 [4/4] RUN pip install --no-cache-dir --no-index --find-links=/app/wheels -r requirements.txt
-#8 DONE 2.8s
-#9 DONE 1.9s
-took 5.336s
-$ docker history chai-report:1.0 --format 'table {{.Size}}\\t{{.CreatedBy}}' | head -n 7
-SIZE      CREATED BY
-0B        CMD ["python" "sales_report.py" "sample_orde…
-24.6kB    COPY sales_report.py board.py save_report.py…
-32.2MB    RUN /bin/sh -c pip install --no-cache-dir --…
-12.3kB    COPY requirements.txt . # buildkit
-5.51MB    COPY wheels/ /wheels/ # buildkit
-8.19kB    WORKDIR /app</div>
-  <p>With <code>COPY . .</code> before <code>pip install</code>, any code edit changes that layer, so pip install ran again (<code>DONE</code>, not <code>CACHED</code>). Here it costs a few seconds because psycopg comes from local wheels; with numpy, pandas or torch it is minutes on every edit. <code>docker history</code> shows the cost of each layer of the good image: 32.2 MB for the installed packages, 5.51 MB for the wheel files (section 10 removes those), 24.6 kB for our code.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A stack of rotis: to change the top one you replace only the top. To change the bottom one, every roti above must come off and go back on. Keep the slow, rarely-changing items (packages) at the bottom and the often-edited code on top.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Layer</strong>: the filesystem change made by one instruction, stored once and shared between images. <strong>Build cache</strong>: reuse of a layer when its instruction and inputs are unchanged; invalidation cascades to later steps. <strong>.dockerignore</strong>: paths never sent to the build (keeps <code>.env</code>, <code>.git</code>, <code>data/</code> out and the context small).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p><code>COPY . .</code> before installing packages makes every code edit reinstall everything. Copy the requirements file alone, install, then copy code. Avoid Alpine bases for data science: its C library (musl) lacks ready wheels for numpy/pandas/torch, so builds compile for ages or fail; use <code>-slim</code>.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Build &amp; Run.</b> We have an image <code>chai-report:1.0</code>. How do we run it, pick which script it runs, look inside, and stop it without losing work?</div>
+RUN pip install --no-cache-dir -r requirements.txt
+CMD ["python", "sales_report.py", "sample_orders.csv"]</div>
+  <div class="fx" data-lang="py">import hashlib, os
 
-  <h2 id="sd-run"><span class="num">05</span>Build &amp; Run</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The image holds three programs: the report, the web board and the database saver. How do we run each one, read its output and exit code, look inside a running container, and stop a long-running one cleanly?</p>
-  </div>
-  <p><code>docker run IMAGE</code> starts a container with the image's <code>CMD</code>; <code>docker run IMAGE command…</code> replaces it. <code>--rm</code> deletes the container when it exits, <code>-d</code> runs it in the background, <code>--name</code> names it. For the long-running case we use the web board, a 20-line standard-library server that shows the report over HTTP:</p>
-  <div class="fx" data-lang="py">import os, signal, subprocess, sys
+IGNORED = {".dockerignore", ".env", "chai.env", "data"}   # what .dockerignore removes
+
+def context_files(edits):
+    """The build context: file name -&gt; content, with any edits applied."""
+    files = {n: open(n).read() for n in sorted(os.listdir(".")) if n not in IGNORED and os.path.isfile(n)}
+    files.update(edits)
+    return files
+
+def build(dockerfile, files, cache):
+    parent = ""                                   # key of the layer below
+    for step in open(dockerfile).read().splitlines():
+        if not step or step.startswith("#"):
+            continue
+        inputs = step                             # the instruction text itself...
+        if step.startswith("COPY"):               # ...plus the bytes of the files it copies
+            srcs = step.split()[1:-1]
+            names = sorted(files) if srcs == ["."] else srcs
+            inputs += "".join(files[n] for n in names)
+        key = hashlib.sha256((parent + inputs).encode()).hexdigest()
+        print(f"  {'cached' if key in cache else 'BUILD '}  {step}")
+        cache.add(key)
+        parent = key
+
+for dockerfile in ("Dockerfile", "Dockerfile.bad"):
+    cache = set()
+    print(f"{dockerfile}, first build:")
+    build(dockerfile, context_files({}), cache)
+    print(f"{dockerfile}, after editing sales_report.py:")
+    edited = {"sales_report.py": open("sales_report.py").read() + "# new comment\\n"}
+    build(dockerfile, context_files(edited), cache)
+    print()</div>
+  <div class="fx" data-lang="text">Dockerfile, first build:
+  BUILD   FROM python:3.12-slim
+  BUILD   WORKDIR /app
+  BUILD   COPY requirements.txt .
+  BUILD   RUN pip install --no-cache-dir -r requirements.txt
+  BUILD   COPY sales_report.py board.py save_report.py sample_orders.csv ./
+  BUILD   CMD ["python", "sales_report.py", "sample_orders.csv"]
+Dockerfile, after editing sales_report.py:
+  cached  FROM python:3.12-slim
+  cached  WORKDIR /app
+  cached  COPY requirements.txt .
+  cached  RUN pip install --no-cache-dir -r requirements.txt
+  BUILD   COPY sales_report.py board.py save_report.py sample_orders.csv ./
+  BUILD   CMD ["python", "sales_report.py", "sample_orders.csv"]
+
+Dockerfile.bad, first build:
+  BUILD   FROM python:3.12-slim
+  BUILD   WORKDIR /app
+  BUILD   COPY . .
+  BUILD   RUN pip install --no-cache-dir -r requirements.txt
+  BUILD   CMD ["python", "sales_report.py", "sample_orders.csv"]
+Dockerfile.bad, after editing sales_report.py:
+  cached  FROM python:3.12-slim
+  cached  WORKDIR /app
+  BUILD   COPY . .
+  BUILD   RUN pip install --no-cache-dir -r requirements.txt
+  BUILD   CMD ["python", "sales_report.py", "sample_orders.csv"]</div>
+  <p>In the good Dockerfile, the edit leaves the first four steps <code>cached</code>: the base image, the folder, the requirements file and, most importantly, the <code>pip install</code> layer all have unchanged keys, because <code>sales_report.py</code> is not an input to any of them. Only the final <code>COPY</code> of the scripts, whose input did change, and the <code>CMD</code> after it are rebuilt. In the bad Dockerfile, <code>COPY . .</code> copies <code>sales_report.py</code> along with everything else, so its key changes, and because <code>pip install</code> sits on top of it, the libraries are reinstalled on every single code edit. A real Docker build prints the same pattern: a run of <code>CACHED</code> lines followed by the steps that actually executed, and the whole build takes a fraction of a second when only the last step reruns.</p>
+  <p>This gives the golden rule for writing Dockerfiles: order the instructions from the ones that change least often to the ones that change most often. The base image changes rarely, the list of libraries occasionally, and the code constantly, so copy the requirements file on its own, install, and copy the code last. Two subtleties follow from the rule. First, for a <code>RUN</code> step Docker only compares the command's text, not what the command would download, so <code>RUN pip install requests</code> without a pinned version keeps reusing whatever version was installed the first time, until something above it changes; pinning versions makes that harmless. Second, if you ever need to force a completely fresh build, for example to pick up security updates in the base image, <code>docker build --no-cache</code> ignores the cache and <code>--pull</code> fetches the newest copy of the base image.</p>
+
+  <h2 id="sd-run"><span class="num">06</span>Running Containers</h2>
+  <p>We have an image. The basic command is <code>docker run IMAGE</code>, which creates a container from the image and runs its default <code>CMD</code>; anything you write after the image name replaces that default command. A few options appear constantly: <code>--rm</code> deletes the container automatically when it exits (otherwise stopped containers pile up), <code>-d</code> ("detached") runs it in the background and prints its ID, and <code>--name</code> gives it a name to use in later commands instead of the long ID.</p>
+  <div class="fx" data-lang="text">$ docker run --rm chai-report:1.0
+$ docker run --rm chai-report:1.0 python sales_report.py; echo "exit code: $?"
+$ docker run --rm chai-report:1.0 python -c "import sys, psycopg; print(sys.version.split()[0], psycopg.__version__)"</div>
+  <p>The first command runs the default <code>CMD</code>, so it prints whatever the report prints, and that output is identical on every machine because the script, the Python and the sample sheet are all inside the image. For reference, here is the same script run directly with Python on this machine, once normally and once without its argument:</p>
+  <div class="fx" data-lang="text">$ python3 sales_report.py sample_orders.csv
+WARN line 8: bad number qty='two' price='15'
+WARN line 9: bad number qty='1' price=''
+WARN line 10: qty -1 is not positive
+Total sales: ₹230 from 6 valid orders, rejected: 3
+top item: masala chai (5 sold)
+  masala chai  ₹100
+  bun maska    ₹60
+  samosa       ₹45
+  ginger chai  ₹25
+$ python3 sales_report.py; echo "exit code: $?"
+usage: python3 sales_report.py ORDERS.csv
+exit code: 2</div>
+  <p>Inside the container, the report prints exactly these lines: three warnings for the bad rows, ₹230 from 6 valid orders, and the per-item breakdown. The second command replaces the default command with <code>python sales_report.py</code> and no file, so the script prints its usage line and exits with code 2, and Docker passes that exit code straight through: <code>docker run</code> itself exits with 2, so shell scripts and CI systems can tell that the job failed. The third command proves the environment: it prints <code>3.12</code> followed by a patch number and the psycopg version from the requirements file, wherever the image runs, even on a server whose own Python is 3.13.</p>
+  <p>For a long-running program we use the stall's web board, a tiny server built only from Python's standard library that shows the report over HTTP. It reads two settings from environment variables, and its last-but-two line installs a handler for the <code>SIGTERM</code> signal; both details matter shortly.</p>
+  <div class="fx" data-lang="text">import os, signal, subprocess, sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 SHEET = os.getenv("SHEET", "sample_orders.csv")
@@ -511,74 +345,47 @@ class Board(BaseHTTPRequestHandler):
 signal.signal(signal.SIGTERM, lambda *args: sys.exit(0))   # stop cleanly on docker stop
 print(f"board on http://{HOST}:8000 showing {SHEET}", flush=True)
 HTTPServer((HOST, 8000), Board).serve_forever()</div>
-  <div class="fx" data-lang="text">$ docker run --rm chai-report:1.0
-WARN line 8: bad number qty='two' price='15'
-WARN line 9: bad number qty='1' price=''
-WARN line 10: qty -1 is not positive
-Total sales: ₹230 from 6 valid orders, rejected: 3
-top item: masala chai (5 sold)
-  masala chai  ₹100
-  bun maska    ₹60
-  samosa       ₹45
-  ginger chai  ₹25
-$ docker run --rm chai-report:1.0 python sales_report.py; echo "exit code: $?"
-usage: python3 sales_report.py ORDERS.csv
-exit code: 2
-$ docker run --rm chai-report:1.0 python -c "import sys, psycopg; print(sys.version.split()[0], psycopg.__version__)"
-3.12.15 3.3.6
-$ docker run -d --name ef chai-report:1.0 python board.py
-70f8c148543a8bc7fc881b6978e566e39b37a8fe97700575c34a0209ba197af0
-$ docker run -d --name sf chai-report:1.0 sh -c "python board.py"
-be84fddcb180137ff97d05791db33a7418f0395eb357debe4f6f1b5172b6e5fb
-$ sleep 1
-$ docker top ef -o pid,args
-PID                 COMMAND
-13455               python board.py
-$ docker top sf -o pid,args
-PID                 COMMAND
-13518               sh -c python board.py
-13532               python board.py
-$ time docker stop ef
-ef
-took 0.614s
-$ time docker stop sf
-sf
-took 12.602s
-$ docker ps -a --filter name=ef --filter name=sf --format 'table {{.Names}}\\t{{.Status}}'
-NAMES     STATUS
-sf        Exited (137) 2 seconds ago
-ef        Exited (0) 12 seconds ago
-$ docker rm ef sf
-ef
-sf</div>
-  <p>The default <code>CMD</code> ran the report on the baked-in sample: ₹230, identical to the Git and Linux notes, now with Python 3.12.15 and psycopg 3.3.6 wherever this image runs. Running the script without a file printed the usage line and the <strong>exit code 2 passed straight through</strong> Docker to our shell (Linux note, section 07). Then the PID-1 experiment: the same board started two ways. In <code>ef</code> (exec form, <code>python board.py</code>) Python itself is the container's main process. In <code>sf</code> (shell form, <code>sh -c "python board.py"</code>, which is what <code>CMD python board.py</code> without brackets produces) <code>sh</code> is the main process and Python its child. <code>docker stop</code> sends SIGTERM to the main process, waits 10 seconds, then SIGKILL. <code>ef</code>: Python received SIGTERM, our handler exited cleanly, under a second, exit 0. <code>sf</code>: <code>sh</code> did not pass SIGTERM on, Docker waited the full 10 seconds, then killed everything: exit <strong>137</strong> (128 + 9), no clean shutdown.</p>
-  <table class="tbl">
-    <tr><th>Command</th><th>Meaning</th></tr>
-    <tr><td><code>docker build -t name:tag .</code></td><td>Build from the Dockerfile in <code>.</code></td></tr>
-    <tr><td><code>docker run --rm IMG [cmd]</code></td><td>Run once, delete afterwards; optional command replaces CMD</td></tr>
-    <tr><td><code>docker run -d --name N IMG</code></td><td>Run in the background with a name</td></tr>
-    <tr><td><code>docker ps [-a]</code>, <code>docker logs [-f] N</code></td><td>List containers; show (follow) stdout/stderr</td></tr>
-    <tr><td><code>docker exec [-it] N cmd</code></td><td>Run a command inside a running container (<code>-it sh</code> for a shell)</td></tr>
-    <tr><td><code>docker top N</code></td><td>The container's processes as the host sees them</td></tr>
-    <tr><td><code>docker stop N</code> / <code>rm</code> / <code>rmi</code></td><td>SIGTERM then SIGKILL after 10 s / delete container / delete image</td></tr>
-  </table>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A shop with a manager at the door (PID 1). Docker tells the manager "closing time". If the manager is the shopkeeper himself (exec form), he closes the till and leaves. If the manager is a doorman who does not pass messages on (shell form), the shopkeeper never hears it, and after ten minutes security cuts the power.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Exec form</strong> <code>CMD ["python", "board.py"]</code>: run the program directly as PID 1. <strong>Shell form</strong> <code>CMD python board.py</code>: run it through <code>/bin/sh -c</code>. <strong>ENTRYPOINT</strong> fixes the executable; <strong>CMD</strong> supplies default arguments that <code>docker run img …</code> overrides. A process that is PID 1 must handle SIGTERM itself (our <code>signal.signal</code> line) or use <code>docker run --init</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Shell-form <code>CMD</code> makes every deploy wait 10 seconds and end in SIGKILL (137), dropping in-flight requests. Use the exec form, and make the app exit cleanly on SIGTERM.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Ports &amp; Volumes.</b> The board runs, but on its own private network: the owner's phone cannot reach it. And the board only shows the baked-in sample, not the real daily sheets on the server. How do the outside world and outside files get in?</div>
+  <p>Running it in the background and working with it looks like this:</p>
+  <div class="fx" data-lang="text">$ docker run -d --name board chai-report:1.0 python board.py
+$ docker ps
+$ docker logs board
+$ docker exec board ls /app
+$ docker exec -it board sh
+$ docker stop board
+$ docker rm board</div>
+  <p><code>docker run -d</code> prints the new container's 64-character ID and returns immediately. <code>docker ps</code> lists running containers, showing <code>board</code> with status <code>Up</code> and how long it has been running. <code>docker logs board</code> prints everything the program wrote to its standard output and standard error, here the line <code>board on http://0.0.0.0:8000 showing sample_orders.csv</code>; this is why programs in containers should log to the screen rather than to files. <code>docker exec</code> runs an extra command inside the already-running container, so <code>ls /app</code> lists our scripts, and <code>exec -it board sh</code> opens an interactive shell inside it (<code>-i</code> keeps input open, <code>-t</code> gives it a terminal), which is the usual way to look around while debugging. <code>docker stop</code> prints the container's name once it has stopped, and <code>docker rm</code> deletes it.</p>
+  <p>What <code>docker stop</code> actually does deserves care, because getting it wrong makes every deployment slow and drops work in progress. It sends the <code>SIGTERM</code> signal to the container's main process, meaning "please finish up and exit", waits up to 10 seconds, and if the process is still alive, sends <code>SIGKILL</code>, which the kernel enforces immediately and which cannot be caught (signals are covered in <a class="xref" data-note="cf_os">Operating Systems</a> and the Linux note). The catch is that the container's main process is PID 1 in its own PID namespace, and the kernel treats PID 1 specially: a signal that PID 1 has not installed a handler for is simply ignored, instead of killing it as it would kill any other process. We can watch this happen with <code>unshare</code>, no Docker needed:</p>
+  <div class="fx" data-lang="text">$ sleep 300 &amp;
+$ kill -TERM $!; wait $!; echo "exit code: $?"
+exit code: 143
+$ unshare --pid --fork sleep 300 2&gt;/dev/null &amp;
+$ sleep 0.5; P=$(pgrep -n -x sleep); grep NSpid /proc/$P/status
+NSpid:	3838	1
+$ kill -TERM $P; sleep 2; ps -o pid,stat,args -p $P
+  PID STAT COMMAND
+ 3838 S    sleep 300
+$ kill -KILL $P; sleep 0.5; ps -p $P &gt; /dev/null || echo "process $P is gone"
+process 3838 is gone
+$ unshare --pid --fork python3 -c 'import signal, sys, time; signal.signal(signal.SIGTERM, lambda *a: sys.exit(0)); time.sleep(300)' &amp;
+$ sleep 0.5; P=$(pgrep -n -x python3); grep NSpid /proc/$P/status
+NSpid:	3847	1
+$ kill -TERM $P; wait $!; echo "exit code: $?"
+exit code: 0</div>
+  <p>First, an ordinary background <code>sleep</code> receives <code>SIGTERM</code> and dies at once with exit code 143, which is 128 + 15, the shell's way of saying "killed by signal 15". Next, the same <code>sleep</code> is started as PID 1 of a new PID namespace: the <code>NSpid</code> line shows it is an ordinary PID on the host and PID 1 inside. We send it <code>SIGTERM</code>, wait two seconds, and <code>ps</code> shows it is still running, because <code>sleep</code> has no handler and the kernel protects PID 1. Only <code>SIGKILL</code> removes it. Last, a Python program that installs a <code>SIGTERM</code> handler, just like <code>board.py</code> does, is started as PID 1; this time <code>SIGTERM</code> reaches the handler, the program exits by itself, and the exit code is 0.</p>
+  <p>Translated back to Docker, a container whose main process ignores <code>SIGTERM</code> makes <code>docker stop</code> wait the full 10 seconds and then kill it, and <code>docker ps -a</code> shows it as <code>Exited (137)</code>, which is 128 + 9 for <code>SIGKILL</code>. The board, with its handler, stops in a fraction of a second with exit code 0. There is one more way to fall into this trap. A Dockerfile can write the command in <strong>exec form</strong>, as a JSON list, <code>CMD ["python", "board.py"]</code>, which runs Python directly as PID 1; or in <strong>shell form</strong>, as plain text, <code>CMD python board.py</code>, which Docker runs as <code>/bin/sh -c "python board.py"</code>. In shell form the shell becomes PID 1 and Python is its child; Debian's shell neither handles <code>SIGTERM</code> nor passes it on, so Python never hears it and every stop ends in a 10-second wait and exit 137. Always use the exec form. If your program cannot handle signals itself, <code>docker run --init</code> puts a tiny init program in front of it as PID 1 whose only job is to forward signals.</p>
+  <p>Finally, <code>CMD</code> versus <code>ENTRYPOINT</code>. <code>ENTRYPOINT</code> fixes the program that always runs, and <code>CMD</code> then supplies its default arguments. With <code>ENTRYPOINT ["python", "sales_report.py"]</code> and <code>CMD ["sample_orders.csv"]</code>, running <code>docker run chai-report /data/orders_2026-10-18.csv</code> replaces only the argument, so the image behaves like a command-line tool. With <code>CMD</code> alone, as in our image, whatever you type after the image name replaces the whole command, which is more flexible for an image that holds several programs.</p>
 
-  <h2 id="sd-ports"><span class="num">06</span>Ports &amp; Volumes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>A container is sealed: its own network and its own files. How does a browser reach the board inside, how does the report read the real sheets that live on the server, and where does output go so it survives the container?</p>
-  </div>
-  <h3>Ports: a door from the host to the container</h3>
-  <p>The board listens on port 8000 <em>inside</em> the container's network. <code>-p 8080:8000</code> (host:container) asks Docker to forward the host's port 8080 to it.</p>
+  <h2 id="sd-ports"><span class="num">07</span>Ports and Container Networking</h2>
+  <p>The board is running, but the owner's phone cannot reach it. The reason is the network namespace from section 02: a container gets its own private network stack, separate from the host's. We can see what "its own network" means by listing the network interfaces (the network cards, real or virtual) on the host and inside a fresh network namespace:</p>
+  <div class="fx" data-lang="text">$ cut -d: -f1 /proc/net/dev | tail -n +3
+    lo
+  ifb0
+  ifb1
+  eth0
+$ unshare --net sh -c 'cut -d: -f1 /proc/net/dev | tail -n +3'
+    lo</div>
+  <p>The host has a loopback interface <code>lo</code> (the one behind the address 127.0.0.1, which only ever talks to the same machine), a real network card <code>eth0</code>, and two others. A new network namespace starts with nothing but its own private <code>lo</code>. Docker then adds one virtual network card to each container and connects it to a private virtual network on the host called a <strong>bridge</strong>, giving the container an internal address such as 172.17.0.2. Other containers on that bridge can reach it, but nothing from outside the host can, and the address changes whenever the container is recreated.</p>
+  <p>To let the outside world in, you <strong>publish</strong> a port with <code>-p HOST_PORT:CONTAINER_PORT</code>. Docker then forwards every connection that arrives on the host's port to the container's port. (<a class="xref" data-note="cf_networking">Networking</a> explains what ports and addresses are.) Think of an office with a reception desk: visitors cannot walk into cabin 8000 directly, but they can ring reception on extension 8080, and reception forwards the call to the cabin.</p>
   <figure class="viz"><svg viewBox="0 0 600 120" width="600">
     <defs><marker id="sd-arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
     <rect x="10" y="30" width="130" height="50" rx="8" class="fs"/><text x="75" y="60" text-anchor="middle">phone / curl</text>
@@ -587,153 +394,91 @@ sf</div>
     <rect x="400" y="40" width="175" height="50" rx="8" class="fg sg"/><text x="487" y="62" text-anchor="middle">container</text><text x="487" y="80" text-anchor="middle" class="tm">board.py :8000</text>
     <g stroke="currentColor" fill="none" stroke-width="1.5"><line x1="142" y1="65" x2="211" y2="65" marker-end="url(#sd-arr2)"/><line x1="327" y1="65" x2="396" y2="65" marker-end="url(#sd-arr2)"/></g>
     <text x="362" y="115" text-anchor="middle" class="tb">-p 8080:8000  (host:container)</text>
-  </svg><figcaption>-p opens a door from a host port to a container port.</figcaption></figure>
+  </svg><figcaption>Publishing a port: connections to the host's port 8080 are forwarded to port 8000 inside the container.</figcaption></figure>
   <div class="fx" data-lang="text">$ docker run -d --name board -p 8080:8000 chai-report:1.0 python board.py
-aa574fca22c765711fd8356bfc6777e26d0c84203d05cb407a9822909d2bd960
-$ sleep 1
-$ curl -s localhost:8080/health
-ok
-$ curl -s localhost:8080/
-Total sales: ₹230 from 6 valid orders, rejected: 3
-top item: masala chai (5 sold)
-  masala chai  ₹100
-  bun maska    ₹60
-  samosa       ₹45
-  ginger chai  ₹25
-$ docker ps --format 'table {{.Names}}\\t{{.Image}}\\t{{.Ports}}\\t{{.Status}}'
-NAMES     IMAGE             PORTS                    STATUS
-board     chai-report:1.0   0.0.0.0:8080-&gt;8000/tcp   Up 1 second
-$ docker logs board
-board on http://0.0.0.0:8000 showing sample_orders.csv
-172.17.0.1 - - [19/Oct/2026 23:58:35] "GET /health HTTP/1.1" 200 -
-172.17.0.1 - - [19/Oct/2026 23:58:35] "GET / HTTP/1.1" 200 -
-$ docker exec board whoami
-root
-$ docker rm -f board
-board
-$ docker run -d --name board-local -p 8081:8000 -e HOST=127.0.0.1 chai-report:1.0 python board.py
-6e1291219933e68374f61bb21de9d5113d76736ab1e1b72240c39bc2e594261d
-$ sleep 1
-$ docker logs board-local
-board on http://127.0.0.1:8000 showing sample_orders.csv
-$ curl -sS localhost:8081/health
-curl: (56) Recv failure: Connection reset by peer
-$ docker rm -f board-local
-board-local</div>
-  <p><code>curl localhost:8080</code> on the host reached the board inside: <code>/health</code> says ok, <code>/</code> shows the report. <code>docker ps</code> shows the rule <code>0.0.0.0:8080-&gt;8000/tcp</code>, and <code>docker logs</code> shows the board's start line and both requests, coming from <code>172.17.0.1</code> (the Docker bridge, i.e. the host). <code>whoami</code> says root (section 11). Then the classic trap: the same board told to listen on <code>127.0.0.1</code>. Inside a container, 127.0.0.1 means "only from inside this container", so forwarded traffic is refused: <code>curl: (56) Recv failure: Connection reset by peer</code>. Servers in containers must listen on <code>0.0.0.0</code>.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>An office with a reception desk. The board sits in cabin 8000; visitors cannot walk in. They dial reception extension 8080, which forwards to cabin 8000. If the cabin only answers calls from inside the room (127.0.0.1), reception's forwarded call is refused.</p>
-  </div>
-  <h3>Volumes: files that come in from outside or outlive the container</h3>
-  <p>Section 03 showed that a container's own files die with it. Two ways to attach storage: a <strong>bind mount</strong> makes a host folder appear inside (<code>-v "$PWD/data":/data:ro</code>; <code>:ro</code> = read-only), a <strong>named volume</strong> is storage Docker manages that survives containers (<code>-v chai-out:/out</code>).</p>
+$ curl localhost:8080/health
+$ curl localhost:8080/
+$ docker ps --format 'table {{.Names}}\\t{{.Ports}}'</div>
+  <p>With the port published, <code>curl localhost:8080/health</code> on the host prints <code>ok</code>, and <code>curl localhost:8080/</code> prints the full report starting with <code>Total sales: ₹230 from 6 valid orders, rejected: 3</code>. The <code>PORTS</code> column of <code>docker ps</code> shows the forwarding rule as <code>0.0.0.0:8080-&gt;8000/tcp</code>, meaning "any address of the host, port 8080, goes to port 8000 in the container". Note the order: host first, container second. And note that <code>EXPOSE 8000</code> in a Dockerfile publishes nothing; it is documentation, and only <code>-p</code> actually opens the door.</p>
+  <p>Now the classic trap. Notice that <code>board.py</code> listens on the address given by its <code>HOST</code> setting, which defaults to <code>0.0.0.0</code>. Many frameworks' development servers instead listen on <code>127.0.0.1</code> by default. A server listening on 127.0.0.1 accepts connections only through the loopback interface, and inside a container that is the container's own private <code>lo</code>. Connections forwarded by Docker arrive on the container's virtual network card instead, so they are refused. We can reproduce the effect on this machine with no containers at all, by listening on one address and connecting through each of the machine's two addresses:</p>
+  <div class="fx" data-lang="py">import socket, subprocess
+
+my_ip = subprocess.check_output(["hostname", "-I"], text=True).split()[0]
+
+def try_server(listen_on):
+    server = socket.socket()
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind((listen_on, 8000))          # what board.py's HOST setting controls
+    server.listen()
+    for target in ("127.0.0.1", my_ip):
+        client = socket.socket()
+        try:
+            client.connect((target, 8000))
+            result = "connected"
+        except OSError as e:
+            result = e.strerror
+        print(f"listening on {listen_on:9}  visitor via {target:9} -&gt; {result}")
+        client.close()
+    server.close()
+
+try_server("127.0.0.1")
+try_server("0.0.0.0")</div>
+  <div class="fx" data-lang="text">listening on 127.0.0.1  visitor via 127.0.0.1 -&gt; connected
+listening on 127.0.0.1  visitor via 192.0.2.2 -&gt; Connection refused
+listening on 0.0.0.0    visitor via 127.0.0.1 -&gt; connected
+listening on 0.0.0.0    visitor via 192.0.2.2 -&gt; connected</div>
+  <p>A server listening on 127.0.0.1 accepts a visitor coming through 127.0.0.1 but refuses one coming through the machine's network address 192.0.2.2, which is exactly the position Docker's forwarded traffic is in. A server listening on 0.0.0.0, which means "every interface I have", accepts both. Inside a container the symptom of getting this wrong is confusing, because <code>docker ps</code> shows the port mapping in place and the logs show the server running, yet <code>curl</code> fails with "Connection reset by peer". The rule is simple: <strong>servers inside containers must listen on 0.0.0.0</strong>. For uvicorn that means <code>--host 0.0.0.0</code>, for Flask <code>flask run --host=0.0.0.0</code>.</p>
+
+  <h2 id="sd-vol"><span class="num">08</span>Volumes and Bind Mounts</h2>
+  <p>Section 03 showed that a container's writable layer is thrown away with the container. That is a feature for code, but it creates two problems. The real daily order sheets live on the server, in its <code>data/</code> folder, and the <code>.dockerignore</code> deliberately kept them out of the image, so the container cannot see them. And a database running in a container must keep its files when the container is replaced by a newer one. Both are solved by mounting storage from outside into the container's filesystem, so that reads and writes at that path bypass the writable layer entirely.</p>
+  <p>Docker offers three kinds. A <strong>bind mount</strong> makes a specific folder of the host appear at a path inside the container, written <code>-v /host/folder:/path/in/container</code>; adding <code>:ro</code> makes it read-only. A <strong>named volume</strong> is storage that Docker creates and manages for you, written <code>-v chai-out:/out</code>; it lives under Docker's own data folder (<code>/var/lib/docker/volumes</code>) and survives any number of containers until you delete it explicitly. A <strong>tmpfs</strong> mount (<code>--tmpfs /scratch</code>) is kept in memory and vanishes when the container stops, which is useful for fast scratch space. A hotel makes a good picture: the container is a room that is cleaned completely at checkout, a named volume is a locker in the lobby that keeps your things between stays, and a bind mount is a door from the room straight into your own house next door.</p>
+  <p>A bind mount is again plain Linux underneath, so we can try it. Here a folder <code>box</code> plays the container's filesystem, with the scripts baked into <code>box/app</code>, and the host's <code>data</code> folder is mounted read-only at <code>box/data</code>:</p>
   <div class="fx" data-lang="text">$ ls data
 orders_2026-10-18.csv
 orders_2026-10-19.csv
-$ docker run --rm chai-report:1.0 ls /app
-board.py
-requirements.txt
-sales_report.py
-sample_orders.csv
-save_report.py
-$ docker run --rm -v "$PWD/data":/data:ro chai-report:1.0 python sales_report.py /data/orders_2026-10-18.csv 2&gt;/dev/null | head -n 1
+$ mkdir -p box/app box/data &amp;&amp; cp sales_report.py sample_orders.csv box/app/
+$ mount --bind data box/data
+$ mount -o remount,bind,ro box/data
+$ python3 box/app/sales_report.py box/data/orders_2026-10-18.csv 2&gt;/dev/null | head -n 1
 Total sales: ₹655 from 18 valid orders, rejected: 1
-$ docker run --rm -v "$PWD/data":/data:ro chai-report:1.0 sh -c 'echo hack &gt;&gt; /data/orders_2026-10-18.csv'
-sh: 1: cannot create /data/orders_2026-10-18.csv: Read-only file system
+$ echo "hack" &gt;&gt; box/data/orders_2026-10-18.csv
+bash: line 13: box/data/orders_2026-10-18.csv: Read-only file system
+$ mount --bind data box/app
+$ ls box/app
+orders_2026-10-18.csv
+orders_2026-10-19.csv</div>
+  <p>The script reads Sunday's sheet through the mount and reports ₹655 from 18 valid orders, a file that was never copied anywhere: the mount is a window onto the host's folder, not a copy. The write attempt fails with "Read-only file system", so a buggy or compromised container cannot damage the original sheets. The last two lines show a trap: mounting the data folder over <code>box/app</code> hides the scripts that were there, and <code>ls</code> now lists only the CSV files. In Docker, mounting a host folder over a path the image already uses, such as <code>/app</code>, makes the image's files at that path invisible for as long as the mount exists.</p>
+  <div class="fx" data-lang="text">$ docker run --rm -v "$PWD/data":/data:ro chai-report:1.0 python sales_report.py /data/orders_2026-10-18.csv
 $ docker volume create chai-out
-chai-out
-$ docker run --rm -v "$PWD/data":/data:ro -v chai-out:/out chai-report:1.0 sh -c 'python sales_report.py /data/orders_2026-10-19.csv &gt; /out/report_2026-10-19.txt 2&gt;&amp;1'
-$ docker run --rm -v chai-out:/out python:3.12-slim head -n 4 /out/report_2026-10-19.txt
-WARN line 8: bad number qty='two' price='15'
-WARN line 9: bad number qty='1' price=''
-WARN line 10: qty -1 is not positive
-Total sales: ₹230 from 6 valid orders, rejected: 3
-$ docker volume inspect chai-out --format '{{.Mountpoint}}'
-/var/lib/docker/volumes/chai-out/_data
-$ docker volume rm chai-out
-chai-out</div>
-  <p>The image contains only <code>/app</code>'s scripts and the sample; <code>.dockerignore</code> kept <code>data/</code> out. With the server's <code>data</code> folder bind-mounted, the same image reported Sunday the 18th (₹655, as in the Linux note's week). Because we mounted it <code>:ro</code>, a write attempt failed with "Read-only file system": the container cannot damage the sheets. A named volume <code>chai-out</code> received the report from one container; a different, brand-new container read it back; Docker keeps it under <code>/var/lib/docker/volumes</code> until we remove it.</p>
-  <div class="cards">
-    <div><b>Bind mount</b><p><code>-v /host/path:/path[:ro]</code>. A host folder inside; changes visible both ways.</p><small>Input data, live code in development</small></div>
-    <div><b>Named volume</b><p><code>-v name:/path</code>. Managed by Docker; survives <code>docker rm</code>.</p><small>Databases, outputs</small></div>
-    <div><b>tmpfs</b><p><code>--tmpfs /scratch</code>. In RAM, gone on stop.</p><small>Fast scratch space</small></div>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Port publishing</strong> (<code>-p host:container</code>): forward a host port into a container. <code>EXPOSE</code> in a Dockerfile only documents a port; it publishes nothing. <strong>Volume / bind mount</strong>: storage mounted into the container that bypasses its writable layer.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>A bind mount hides whatever the image had at that path: mount a folder over <code>/app</code> and the baked-in scripts "disappear". And files a root container writes into a bind mount are owned by root on the host (section 11).</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Env &amp; Config.</b> The saver also needs a database address and password, and those differ between Meera's laptop and the server. How does one image get different settings without rebuilding?</div>
+$ docker run --rm -v "$PWD/data":/data:ro -v chai-out:/out chai-report:1.0 \\
+      sh -c 'python sales_report.py /data/orders_2026-10-19.csv &gt; /out/report.txt'
+$ docker run --rm -v chai-out:/out python:3.12-slim cat /out/report.txt
+$ docker volume ls
+$ docker volume rm chai-out</div>
+  <p>With Docker, the first command prints the same ₹655 report from the bind-mounted sheet (bind mounts need an absolute host path, hence <code>"$PWD/data"</code>). <code>docker volume create</code> prints the volume's name. The third command writes a report into the volume and prints nothing; the fourth starts a completely different container from a different image, mounts the same volume, and prints the report, proving the data outlived the container that wrote it. <code>docker volume ls</code> lists volumes by driver and name, and <code>docker volume rm</code> deletes one, and its data, for good. As a rule of thumb, use bind mounts for input data and for live code during development, and named volumes for anything a container owns, such as database files. One more detail matters on Linux hosts: a file a container creates in a bind mount belongs to whichever user ID the container runs as, and by default that is root, so the host ends up with root-owned files an ordinary user cannot delete. Section 12 returns to this. (<a class="xref" data-note="cf_storage">Storage &amp; File Systems</a> explains what mounting a file system means.)</p>
 
-  <h2 id="sd-env"><span class="num">07</span>Env &amp; Config</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The same image must talk to a test database on the laptop and the real one on the server, and the password must not live in the image (anyone who pulls it could read it). Where do settings come from?</p>
-  </div>
-  <p>Exactly the Linux note's environment variables, passed in when the container starts: <code>-e KEY=value</code> per variable, or <code>--env-file file</code> for many. The code reads them with <code>os.environ</code> / <code>os.getenv</code>.</p>
-  <div class="fx" data-lang="text">$ docker run --rm chai-report:1.0 python -c 'import os; print(os.getenv("DATABASE_URL"))'
-None
-$ docker run --rm -e DATABASE_URL=postgresql://chai:chai-secret@db:5432/stall chai-report:1.0 python -c 'import os; print(os.getenv("DATABASE_URL"))'
+  <h2 id="sd-env"><span class="num">09</span>Configuration with Environment Variables</h2>
+  <p>The saver needs a database address and a password, and they differ between Meera's laptop (a test database) and the stall's server (the real one). Building a separate image for each would defeat the purpose, because the image that was tested would not be the image that runs. Worse, a password inside an image can be read by anyone who can pull the image, as section 12 demonstrates. So settings are supplied when the container starts, as environment variables, and the code reads them with <code>os.environ</code>. This is the same mechanism the Linux note uses for any process; Docker just gives you options to set the variables for the container's main process.</p>
+  <p>Think of a hired cook. She arrives with her skills and her knives (the image), and each household tells her at the door where the gas is and which spices to use (the environment variables). Nobody tattoos one household's address onto her arm. On this machine, the effect of each Docker option can be shown with plain Python and the shell:</p>
+  <div class="fx" data-lang="text">$ python3 -c 'import os; print(os.environ["DATABASE_URL"])' 2&gt;&amp;1 | tail -n 1
+KeyError: 'DATABASE_URL'
+$ DATABASE_URL=postgresql://chai:chai-secret@db:5432/stall python3 -c 'import os; print(os.environ["DATABASE_URL"])'
 postgresql://chai:chai-secret@db:5432/stall
 $ cat chai.env
 DATABASE_URL=postgresql://chai:chai-secret@db:5432/stall
 CURRENCY=INR
-$ docker run --rm --env-file chai.env chai-report:1.0 sh -c 'env | grep -E "^(DATABASE_URL|CURRENCY)=" | sort'
-CURRENCY=INR
-DATABASE_URL=postgresql://chai:chai-secret@db:5432/stall
-$ docker run --rm -v "$PWD/data":/data:ro chai-report:1.0 python save_report.py 2026-10-19 2&gt;&amp;1 | tail -n 1
-KeyError: 'DATABASE_URL'</div>
-  <p>Without <code>-e</code>, Python saw <code>None</code>; with it, the URL. <code>--env-file chai.env</code> loaded both lines of the file. And <code>save_report.py</code> without <code>DATABASE_URL</code> stopped immediately with <code>KeyError: 'DATABASE_URL'</code>: the "crash early" pattern from the Linux note, now inside a container. The image is identical in all four runs; only the run-time settings differ.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A hired cook (the image) arrives with her skills and knives. Each household tells her at the door where the gas cylinder is and which spices to use (env vars). Nobody tattoos one house's address onto her arm.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Runtime configuration</strong>: settings supplied when a container starts (<code>-e</code>, <code>--env-file</code>, Compose <code>environment:</code>, orchestrator secrets) rather than built into the image. <code>ENV</code> in a Dockerfile sets <em>defaults</em> baked into the image (fine for <code>PYTHONUNBUFFERED=1</code>, never for passwords).</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p><code>--env-file</code> files are secrets: keep them out of Git (<code>.gitignore</code>) and out of the build (<code>.dockerignore</code> lists <code>.env</code>). Our <code>chai.env</code> is <em>not</em> in <code>.dockerignore</code>, and section 11 shows what that allows.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Compose: App + Postgres.</b> We can configure the saver, but it still has no database to talk to. How do we run Postgres as a second container and connect them reliably?</div>
+$ env $(cat chai.env) python3 -c 'import os; print(os.environ["CURRENCY"], os.environ["DATABASE_URL"])'
+INR postgresql://chai:chai-secret@db:5432/stall</div>
+  <p>Reading <code>os.environ["DATABASE_URL"]</code> when the variable is missing raises <code>KeyError</code>, and that is deliberate: a required setting should make the program stop at once with a clear error, rather than run on and fail later in a confusing way. Setting the variable in front of the command, as on the second line, is what <code>docker run -e DATABASE_URL=...</code> does for a container. The file <code>chai.env</code> holds several settings, one <code>NAME=value</code> per line, and loading all of them at once, as the last line does with <code>env</code>, is what <code>docker run --env-file chai.env</code> does. The Docker forms look like this:</p>
+  <div class="fx" data-lang="text">$ docker run --rm -e DATABASE_URL=postgresql://chai:chai-secret@db:5432/stall chai-report:1.0 python save_report.py 2026-10-19
+$ docker run --rm --env-file chai.env chai-report:1.0 printenv CURRENCY</div>
+  <p>The second command prints <code>INR</code>. The first would save the report, if a server called <code>db</code> existed, which it does not yet; the next section adds it. Variables set with <code>-e</code> or <code>--env-file</code> override defaults baked into the image with <code>ENV</code>. Use <code>ENV</code> for harmless defaults that are the same everywhere, such as <code>PYTHONUNBUFFERED=1</code> (which makes Python print log lines immediately instead of buffering them), and never for passwords. Treat files like <code>chai.env</code> as secrets: list them in <code>.gitignore</code> so they never reach Git, and in <code>.dockerignore</code> so they never reach an image, which is why our <code>.dockerignore</code> contains <code>*.env</code>.</p>
 
-  <h2 id="sd-compose"><span class="num">08</span>Docker Compose: App + Postgres</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>The saver needs a Postgres container. How do two containers find each other (IP addresses change on every restart), why does <code>localhost</code> not work, how do we make the saver wait until Postgres is ready, and how do we keep the table when containers are recreated? And who types all those long <code>docker run</code> lines?</p>
-  </div>
-  <h3>First by hand: a network where names work</h3>
-  <p>On a <strong>user-defined network</strong>, Docker runs a small DNS service: every container can reach every other by its <strong>name</strong>. We create a network, start Postgres named <code>db</code> on it, and run the saver three ways:</p>
-  <div class="fx" data-lang="text">$ docker network create chainet
-df4b2a66b18cd6cb5212d6c498484f0be74e1b1c35b6a66b8d9d29e851e46b93
-$ docker run -d --name db --network chainet -e POSTGRES_USER=chai -e POSTGRES_PASSWORD=chai-secret -e POSTGRES_DB=stall postgres:16-alpine
-273c772b70382f85c87263a8ee6d9c952012dd20a1fffbf247ef7325ca5576b9
-$ docker run --rm --network chainet -v "$PWD/data":/data:ro -e DATABASE_URL=postgresql://chai:chai-secret@db:5432/stall chai-report:1.0 python save_report.py 2026-10-19
-saved 2026-10-19: ₹230 from 6 valid orders, rejected: 3
-$ docker run --rm -v "$PWD/data":/data:ro -e DATABASE_URL=postgresql://chai:chai-secret@db:5432/stall chai-report:1.0 python save_report.py 2026-10-19 2&gt;&amp;1 | tail -n 1
-psycopg.OperationalError: failed to resolve host 'db': [Errno -2] Name or service not known
-$ docker run --rm --network chainet -v "$PWD/data":/data:ro -e DATABASE_URL=postgresql://chai:chai-secret@localhost:5432/stall chai-report:1.0 python save_report.py 2026-10-19 2&gt;&amp;1 | tail -n 1
-	Is the server running on that host and accepting TCP/IP connections?
-$ docker network inspect chainet --format '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{end}}'
-db 172.18.0.2/16
-$ docker rm -f db
-db
-$ docker network rm chainet
-chainet</div>
-  <p>On the same network, <code>@db:5432</code> worked: <strong>saved 2026-10-19: ₹230 from 6 valid orders, rejected: 3</strong>. From the default network the name <code>db</code> could not even be resolved ("Name or service not known"). With <code>localhost</code> the connection was refused: inside a container, <code>localhost</code> is that container itself, where no Postgres runs. Docker assigned <code>db</code> an IP (172.18.0.2), which we never had to type.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>An office intercom: inside the office you dial "Accounts" by name and it rings the right desk even if Accounts moved floors. People outside (another network) cannot use the intercom names at all. Dialling "myself" (localhost) only rings your own phone.</p>
-  </div>
-  <h3>Then with Compose: the whole stack in one file</h3>
-  <p><strong>Docker Compose</strong> describes all containers, their settings, network and volumes in one YAML file and starts them with one command. Each key under <code>services</code> becomes a container <em>and</em> its DNS name. <code>\${DB_PASSWORD}</code> is filled from a <code>.env</code> file next to <code>compose.yaml</code> (kept out of Git and of the image).</p>
-  <figure class="viz"><svg viewBox="0 0 600 160" width="600">
-    <defs><marker id="sd-arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
-    <rect x="5" y="20" width="90" height="44" rx="8" class="fs"/><text x="50" y="47" text-anchor="middle">phone</text>
-    <rect x="130" y="8" width="460" height="140" rx="10" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="145" y="26" class="tm">network: chai_default</text>
-    <rect x="160" y="30" width="140" height="40" rx="8" class="fb sb"/><text x="230" y="55" text-anchor="middle">board :8000</text>
-    <rect x="160" y="95" width="140" height="40" rx="8" class="fb sb"/><text x="230" y="120" text-anchor="middle">report (one-shot)</text>
-    <rect x="420" y="60" width="150" height="44" rx="8" class="fg sg"/><text x="495" y="80" text-anchor="middle">db (Postgres)</text><text x="495" y="96" text-anchor="middle" class="tm">volume pgdata</text>
-    <g stroke="currentColor" fill="none" stroke-width="1.5"><line x1="97" y1="42" x2="156" y2="48" marker-end="url(#sd-arr3)"/><line x1="302" y1="112" x2="416" y2="90" marker-end="url(#sd-arr3)"/></g>
-    <text x="112" y="80" text-anchor="middle" class="tm">:8080</text><text x="360" y="118" text-anchor="middle" class="tm">db:5432</text>
-  </svg><figcaption>Three services, one network created by Compose, one named volume for the database files.</figcaption></figure>
-  <div class="fx" data-lang="text">$ cat compose.yaml
-name: chai
+  <h2 id="sd-compose"><span class="num">10</span>Docker Compose</h2>
+  <p>The saver needs a Postgres server, and the obvious way to get one is the official <code>postgres</code> image, run as a second container. That raises several questions at once. How does the saver find the database, when container addresses change on every restart? Why can't it just use <code>localhost</code>? How do we make the saver wait until Postgres is ready? Where do the database files live? And who will type, correctly and in the right order, three long <code>docker run</code> lines with all their options every time?</p>
+  <p>The address question has a neat answer. When containers are attached to a <strong>user-defined network</strong> (one you create, rather than Docker's default bridge), Docker runs a small DNS service for them, so every container can reach every other one <em>by its name</em>. If the database container is called <code>db</code>, the saver connects to <code>db:5432</code> and Docker resolves the name to whatever the current address is. Think of an office intercom: you dial "Accounts" and it rings the right desk, even if Accounts moved floors yesterday. And <code>localhost</code> does not work for the reason section 07 showed: each container has its own private loopback interface, so inside the saver's container <code>localhost</code> means the saver's own container, where no Postgres is running, and the connection is refused.</p>
+  <p><strong>Docker Compose</strong> answers the remaining questions. It is a tool, run as <code>docker compose</code>, that reads one YAML file describing all the containers of an application, together with their settings, network and volumes, and starts or stops them all with one command. Each entry under <code>services</code> becomes one container, and its name becomes that container's DNS name on a network Compose creates automatically. Here is the stall's <code>compose.yaml</code>, and the <code>.env</code> file next to it, which Compose reads to fill in <code>\${DB_PASSWORD}</code>:</p>
+  <div class="fx" data-lang="text">name: chai
 
 services:
   db:
@@ -772,129 +517,45 @@ services:
       - "8080:8000"
 
 volumes:
-  pgdata:
-$ cat .env
-DB_PASSWORD=chai-secret
-$ docker compose up -d 2&gt;&amp;1 | grep -vE 'Pulling|Pulled|Building|Built|transferring|^ *$' | tail -n 8
- Container chai-board-1 Starting 
- Container chai-db-1 Starting 
- Container chai-board-1 Started 
- Container chai-db-1 Started 
- Container chai-db-1 Waiting 
- Container chai-db-1 Healthy 
- Container chai-report-1 Starting 
- Container chai-report-1 Started 
-$ docker compose ps -a --format 'table {{.Service}}\\t{{.Image}}\\t{{.Status}}\\t{{.Ports}}'
-SERVICE   IMAGE                STATUS                     PORTS
-board     chai-report:1.0      Up 7 seconds               0.0.0.0:8080-&gt;8000/tcp
-db        postgres:16-alpine   Up 6 seconds (healthy)     5432/tcp
-report    chai-report:1.0      Exited (0) 3 seconds ago   
+  pgdata:</div>
+  <div class="fx" data-lang="text">DB_PASSWORD=chai-secret</div>
+  <p>Go through it service by service. <code>db</code> runs the official <code>postgres:16-alpine</code> image; that image reads the variables <code>POSTGRES_USER</code>, <code>POSTGRES_PASSWORD</code> and <code>POSTGRES_DB</code> on its first start and creates that user and database. Its data folder is a named volume, <code>pgdata</code>, declared at the bottom of the file, so the table survives when the container is replaced. Its <code>healthcheck</code> tells Docker to run <code>pg_isready</code> inside the container every 2 seconds, up to 10 times, and to mark the container "healthy" once it succeeds. <code>report</code> is our saver: <code>build: .</code> tells Compose how to build <code>chai-report:1.0</code> from our Dockerfile, <code>command</code> replaces the image's default <code>CMD</code>, <code>DATABASE_URL</code> uses the host name <code>db</code>, the real sheets are bind-mounted read-only, and <code>depends_on</code> with <code>condition: service_healthy</code> makes Compose wait for the healthcheck before starting it. <code>board</code> reuses the same image to run the web board on the real Monday sheet, published on port 8080. One image, two very different containers: exactly the class-and-object relationship from section 03.</p>
+  <p>The healthcheck is not optional decoration. A plain <code>depends_on: [db]</code> only controls the <em>order</em> in which containers start. Postgres needs a few seconds after its container starts before it accepts connections, so without the healthcheck the saver would start, try to connect too early, and crash on a cold start. Even with it, long-running applications should retry their database connection, because a database can also restart later.</p>
+  <div class="fx" data-lang="text">$ docker compose up -d
+$ docker compose ps -a
 $ docker compose logs report
-report-1  | saved 2026-10-19: ₹230 from 6 valid orders, rejected: 3
-$ curl -s localhost:8080/ | head -n 1
-Total sales: ₹230 from 6 valid orders, rejected: 3
 $ docker compose exec db psql -U chai -d stall -c "SELECT * FROM daily_sales;"
-    day     | total | orders | rejected 
-------------+-------+--------+----------
- 2026-10-19 |   230 |      6 |        3
-(1 row)
+$ docker compose run --rm report python save_report.py 2026-10-18
+$ docker compose down
+$ docker compose down -v</div>
+  <p>Here is what each of these prints. <code>up -d</code> builds the image if needed, creates the network <code>chai_default</code> and the volume <code>chai_pgdata</code>, and prints a progress line per container: <code>chai-db-1</code> and <code>chai-board-1</code> start at once, then <code>chai-db-1</code> shows <code>Waiting</code> and <code>Healthy</code>, and only after that does <code>chai-report-1</code> start. <code>ps -a</code> lists the three services: <code>board</code> up with <code>0.0.0.0:8080-&gt;8000/tcp</code>, <code>db</code> up and marked <code>(healthy)</code>, and <code>report</code> as <code>Exited (0)</code>, because it is a one-shot job that did its work and finished. <code>logs report</code> prints that job's output, prefixed with the container's name: <code>saved 2026-10-19: ₹230 from 6 valid orders, rejected: 3</code>. <code>exec db psql ...</code> runs the Postgres command-line client inside the database container and prints the table with one row, <code>2026-10-19 | 230 | 6 | 3</code>. <code>run --rm report ...</code> starts a one-off extra container of the <code>report</code> service, with all its settings, to save Sunday's sheet as well, printing <code>saved 2026-10-18: ₹655 from 18 valid orders, rejected: 1</code>.</p>
+  <p>The last two commands are the ones to understand before you use Compose on a real server. <code>down</code> stops and removes the containers and the network but <strong>keeps named volumes</strong>, so after the next <code>up</code> the <code>daily_sales</code> table still holds both rows. <code>down -v</code> also deletes the volumes, and with them every row in the database. It is handy for resetting a development setup and a disaster if typed out of habit on a server. Compose is the standard tool for running a multi-container application on one machine, for local development and for small servers; when an application must run across many machines, with automatic restarts and scaling, the same images are handed to <a class="xref" data-note="mlops_k8s">Kubernetes</a>, whose concepts (services found by name, volumes, configuration injected at run time) are direct descendants of what you see here.</p>
 
-$ docker compose run --rm report python save_report.py 2026-10-18 2&gt;&amp;1 | tail -n 1
-saved 2026-10-18: ₹655 from 18 valid orders, rejected: 1
-$ docker compose exec db psql -U chai -d stall -c "SELECT * FROM daily_sales ORDER BY day;"
-    day     | total | orders | rejected 
-------------+-------+--------+----------
- 2026-10-18 |   655 |     18 |        1
- 2026-10-19 |   230 |      6 |        3
-(2 rows)
+  <h2 id="sd-reg"><span class="num">11</span>Registries, Tags and Digests</h2>
+  <p>The stack works on the machine that built the image. The stall's server must now run exactly the same image, and rebuilding it there is not the answer: a rebuild on another day can pick up a newer base image or a different package and produce a subtly different image from the one that was tested. Images are moved instead, through a <strong>registry</strong>, a server that stores images the way GitHub stores code. You <strong>push</strong> an image to it from your laptop or your CI system, and servers <strong>pull</strong> it. Docker Hub is the default public registry; companies typically use GitHub Container Registry (<code>ghcr.io</code>), AWS ECR, Google Artifact Registry or a private registry of their own.</p>
+  <p>An image's full name says where it lives: <code>registry-host/repository:tag</code>, for example <code>ghcr.io/chai-stall/chai-report:1.0.0</code>. If you leave out the host, Docker assumes Docker Hub, which is why <code>python:3.12-slim</code> really means <code>docker.io/library/python:3.12-slim</code>. If you leave out the tag, Docker assumes the tag <code>latest</code>. A <strong>tag</strong> is just a human-friendly label that points at one image, and it can be moved to point at a different image at any time. A <strong>digest</strong> is the image's true identity: a SHA-256 fingerprint computed from its content, written <code>sha256:</code> followed by 64 hexadecimal characters. Layers are identified the same way, which is how a registry knows that it already has a layer and need not upload it again. The idea is easy to check with a layer-like archive of our app folder:</p>
+  <div class="fx" data-lang="text">$ tar --sort=name --mtime=@0 -C layer-app -cf - . | sha256sum
+7778c3e44ca2bf89306450d38a2f4874b98be6799bebd027cd526512e1edcb47  -
+$ tar --sort=name --mtime=@0 -C layer-app -cf - . | sha256sum
+7778c3e44ca2bf89306450d38a2f4874b98be6799bebd027cd526512e1edcb47  -
+$ echo "# shown on the stall's phone" &gt;&gt; layer-app/app/sales_report.py
+$ tar --sort=name --mtime=@0 -C layer-app -cf - . | sha256sum
+b468746bf0571915a6318c573cb98bd543b6aac60a576fea907d8c579307e926  -</div>
+  <p>Packing the same files twice gives the same fingerprint, character for character, so identical content always has the same digest no matter who builds it or when. Adding one comment line to the script gives a completely different fingerprint. That is why a digest names exact content and can never be reused for anything else, while a tag is a sticker that can be peeled off and put on another image. Libraries offer a good comparison: the stickers "Edition 1.0" and "New arrival" both sit on book spines, but next month "New arrival" will be on a different book.</p>
+  <div class="fx" data-lang="text">$ docker tag chai-report:1.0 ghcr.io/chai-stall/chai-report:1.0.0
+$ docker push ghcr.io/chai-stall/chai-report:1.0.0
+$ docker pull ghcr.io/chai-stall/chai-report:1.0.0
+$ docker pull ghcr.io/chai-stall/chai-report@sha256:&lt;digest printed by push&gt;</div>
+  <p><code>docker tag</code> prints nothing and copies nothing; it just adds a second name for the same image ID, as <code>docker images</code> would show by listing both names with one ID. <code>docker push</code> uploads only the layers the registry does not already have, printing one line per layer (<code>Pushed</code> or <code>Layer already exists</code>), and ends with a line like <code>1.0.0: digest: sha256:… size: 856</code>. <code>docker pull</code> on the server downloads the layers it lacks and prints the digest and <code>Status: Downloaded newer image for ...</code>. Pulling by digest instead of by tag guarantees byte-identical content.</p>
+  <p>This is why <code>:latest</code> is dangerous in production. Despite its name, it does not mean "newest"; it is only the default tag, and it moves whenever anyone pushes an image under it. Two servers that pull <code>latest</code> a day apart may be running different code, and when something breaks there is no record of what "the previous latest" was to roll back to. The professional habit is to tag each image with something that never moves and that ties it to the code: the Git tag (<code>1.0.0</code> for the Git note's <code>v1.0.0</code>) or the commit's SHA, and to deploy that tag or the digest. <a class="xref" data-note="mlops_cicd">CI/CD for ML</a> shows pipelines that build, tag and push images this way automatically on every merge.</p>
 
-$ docker compose down 2&gt;&amp;1 | tail -n 3
- Container chai-db-1 Removed 
- Network chai_default Removing 
- Network chai_default Removed 
-$ docker volume ls --filter name=chai
-DRIVER    VOLUME NAME
-local     chai_pgdata
-$ docker compose up -d db 2&gt;&amp;1 | tail -n 1
- Container chai-db-1 Started 
-$ docker compose exec db psql -U chai -d stall -c "SELECT count(*) FROM daily_sales;"
- count 
--------
-     2
-(1 row)
-
-$ docker compose down -v 2&gt;&amp;1 | tail -n 2
- Volume chai_pgdata Removed 
- Network chai_default Removed 
-$ docker volume ls --filter name=chai
-DRIVER    VOLUME NAME</div>
-  <p>Walk through it. <code>up -d</code> created the network <code>chai_default</code> and volume <code>chai_pgdata</code>, started <code>db</code>, <strong>waited</strong> until its healthcheck (<code>pg_isready</code> every 2 s) reported Healthy, and only then started <code>report</code> (<code>depends_on: condition: service_healthy</code>). <code>board</code> has no dependency and started at once. <code>ps -a</code> shows the stack: board up with its port, db healthy, report <code>Exited (0)</code> because it is a one-shot job; its log has the saved line. The board on 8080 shows ₹230 from the bind-mounted real sheet. In <code>psql</code> the row is there; <code>compose run --rm report python save_report.py 2026-10-18</code> ran a one-off second job with the same settings (₹655). <code>down</code> removed containers and network but <strong>kept the volume</strong>; after <code>up -d db</code> the table still held 2 rows. Only <code>down -v</code> deleted the volume and the data.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Compose file</strong>: <code>services</code> (containers: <code>image</code>/<code>build</code>, <code>command</code>, <code>environment</code>, <code>ports</code>, <code>volumes</code>, <code>depends_on</code>, <code>healthcheck</code>), top-level <code>volumes</code> and <code>networks</code>. <strong>Healthcheck</strong>: a command Docker runs periodically to mark a container healthy. Commands: <code>up -d</code>, <code>ps -a</code>, <code>logs</code>, <code>exec</code>, <code>run --rm</code>, <code>down</code>, <code>down -v</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Plain <code>depends_on: [db]</code> only orders <em>start-up</em>; it does not wait for Postgres to accept connections, and the saver would fail on a cold start. Use a healthcheck + <code>service_healthy</code>, and still retry connections in long-running apps. And <code>docker compose down -v</code> deletes the database: never type it on a server out of habit.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Registries &amp; Tags.</b> The stack runs where the image was built. The stall's server must get exactly this image, without rebuilding it. How do images travel?</div>
-
-  <h2 id="sd-reg"><span class="num">09</span>Registries &amp; Tags</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>We will not email a 230 MB image or rebuild it on every server (that could produce a different image). Where do images live between machines, and how do we name exactly which one a server should run?</p>
-  </div>
-  <p>A <strong>registry</strong> stores images, like GitHub stores code: CI or your laptop <strong>pushes</strong>, servers <strong>pull</strong>. Docker Hub is the default; companies use GitHub Container Registry (ghcr.io), AWS ECR or GCP Artifact Registry. An image's full name says where it lives: <code>registry-host/name:tag</code>. A <strong>tag</strong> is just a label pointing at an image; without a host Docker assumes Docker Hub, without a tag it assumes <code>latest</code>. We ran a private registry locally on port 5000 (the <code>registry:2</code> image), so the whole cycle is real:</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>Books in a library. The image is the book; tags are labels on the spine, like "Edition 1.0" and "Newest arrival". The "Newest arrival" sticker moves to another book next month; "Edition 1.0" never changes. That is <code>:latest</code> versus <code>:1.0</code>.</p>
-  </div>
-  <div class="flow"><span>build</span><span>tag host/name:version</span><span>push</span><span>server pulls</span><span>run</span></div>
-  <div class="fx" data-lang="text">$ docker run -d --name registry -p 5000:5000 registry:2
-7bc9710523918104763a26a97f0b682f2c29bc7b0364a373275e5f00a9c0b825
-$ docker tag chai-report:1.0 localhost:5000/chai-report:1.0
-$ docker images --format 'table {{.Repository}}\\t{{.Tag}}\\t{{.ID}}' | grep -E 'REPOSITORY|chai-report'
-REPOSITORY                   TAG         IMAGE ID
-chai-report                  1.0         181419016e8b
-localhost:5000/chai-report   1.0         181419016e8b
-$ docker push localhost:5000/chai-report:1.0 2&gt;&amp;1 | tail -n 1
-1.0: digest: sha256:181419016e8b219490bd6a275f28a334cc97992531020d67f8a21593b32c5a3d size: 856
-$ curl -s localhost:5000/v2/chai-report/tags/list
-{"name":"chai-report","tags":["1.0"]}
-$ docker rmi localhost:5000/chai-report:1.0
-Untagged: localhost:5000/chai-report:1.0
-$ docker pull localhost:5000/chai-report:1.0 2&gt;&amp;1 | tail -n 2
-Status: Downloaded newer image for localhost:5000/chai-report:1.0
-localhost:5000/chai-report:1.0
-$ docker tag chai-report:1.0 localhost:5000/chai-report:latest
-$ docker push localhost:5000/chai-report:latest 2&gt;&amp;1 | tail -n 1
-latest: digest: sha256:181419016e8b219490bd6a275f28a334cc97992531020d67f8a21593b32c5a3d size: 856
-$ docker tag chai-report:1.1 localhost:5000/chai-report:latest
-$ docker push localhost:5000/chai-report:latest 2&gt;&amp;1 | tail -n 1
-latest: digest: sha256:d1956824cb14282f274afcebeb277286ee55ebf71678c9bea3a4e1c265483e19 size: 856
-$ docker run --rm localhost:5000/chai-report:latest 2&gt;/dev/null | head -n 1
-Sales today: ₹230 from 6 valid orders, rejected: 3
-$ curl -s localhost:5000/v2/chai-report/tags/list
-{"name":"chai-report","tags":["latest","1.0"]}
-$ docker rm -f registry
-registry</div>
-  <p>Two names, one image ID: tagging copies nothing. <code>push</code> uploaded the layers and printed the <strong>digest</strong>, a sha256 of the exact content. <code>rmi</code> on a tag only removed the label ("Untagged"); <code>pull</code> brought it back by name. Then the <code>:latest</code> experiment: we pushed 1.0 as <code>latest</code> (same digest as 1.0), then a changed build (its summary line says "Sales today") under the same <code>latest</code>: a different digest, and anyone pulling <code>latest</code> now runs different code. The registry lists the tags <code>latest</code> and <code>1.0</code>; nothing records what <code>latest</code> used to be.</p>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Tag</strong>: mutable, human-friendly label (<code>1.0</code>, <code>latest</code>, a git SHA). <strong>Digest</strong>: immutable content address (<code>name@sha256:…</code>); pulling by digest always gives byte-identical content. <strong>Repository</strong>: all tags of one image name.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p><code>:latest</code> is not "newest"; it is the default tag, and it moves whenever someone pushes it. Deploy immutable tags that match the Git tag (<code>chai-report:1.0.0</code>) or the commit SHA, or pin the digest.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Multi-Stage Builds &amp; Small Images.</b> Every server pulls all 230 MB, including 5.5 MB of wheel files that are useless after installation. How do we ship only what the program needs at run time?</div>
-
-  <h2 id="sd-small"><span class="num">10</span>Multi-Stage Builds &amp; Small Images</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p><code>docker history</code> showed the installer files (<code>/wheels</code>) shipped forever in the image. Real projects also carry compilers, caches and build tools that are needed to <em>build</em> but not to <em>run</em>. How do we keep them out, and why does deleting a file in a later step not help?</p>
-  </div>
-  <p>A <strong>multi-stage build</strong> has several <code>FROM</code>s. The first stage (the builder) installs everything into a virtual environment; the final stage starts again from a clean base and copies in only the finished venv and our code. Only the last stage becomes the image. We also create an unprivileged user and switch to it (section 11).</p>
-  <div class="fx" data-lang="text">$ cat Dockerfile.multi
-# ---- stage 1: build the virtual environment ----
+  <h2 id="sd-small"><span class="num">12</span>Small, Safe Images</h2>
+  <p>The image works and travels. The last step is making it lean and safe, because every server pulls every byte of it, and everything inside it is something an attacker could use or read. Real projects often need tools at build time that are useless at run time: a C compiler and header files to compile a package, pip's caches, downloaded installer files. A <strong>multi-stage build</strong> keeps them out of the final image. The Dockerfile contains several <code>FROM</code> lines, each starting a new stage. An early stage, often called the builder, installs everything; the final stage starts again from a clean base and copies in only the finished result with <code>COPY --from=builder</code>. Only the last stage becomes the image, and everything else in the builder is simply left behind.</p>
+  <div class="fx" data-lang="text"># ---- stage 1: build the virtual environment ----
 FROM python:3.12-slim AS builder
-COPY wheels/ /wheels/
 COPY requirements.txt .
 RUN python -m venv /opt/venv &amp;&amp; \\
-    /opt/venv/bin/pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt
+    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # ---- stage 2: the small runtime image ----
 FROM python:3.12-slim
@@ -904,238 +565,158 @@ COPY --from=builder /opt/venv /opt/venv
 COPY sales_report.py board.py save_report.py sample_orders.csv ./
 ENV PATH="/opt/venv/bin:$PATH" PYTHONUNBUFFERED=1
 USER app
-CMD ["python", "sales_report.py", "sample_orders.csv"]
-$ docker build -q -f Dockerfile.multi -t chai-report:multi .
-sha256:c684b9dac4d5b0b6188f3cb6898bb2bde781a43e40db62644cd441296a54b58e
-$ docker images --format 'table {{.Repository}}:{{.Tag}}\\t{{.Size}}' | grep -E 'REPOSITORY|chai-report:(1.0|multi)|python:3.12-slim'
-REPOSITORY:TAG                      SIZE
-chai-report:multi                   223MB
-chai-report:1.0                     230MB
-localhost:5000/chai-report:1.0      230MB
-python:3.12-slim                    179MB
-$ docker history chai-report:multi --format 'table {{.Size}}\\t{{.CreatedBy}}' | head -n 6
-SIZE      CREATED BY
-0B        CMD ["python" "sales_report.py" "sample_orde…
-0B        USER app
-0B        ENV PATH=/opt/venv/bin:/usr/local/bin:/usr/l…
-24.6kB    COPY sales_report.py board.py save_report.py…
-36.1MB    COPY /opt/venv /opt/venv # buildkit
-$ docker run --rm chai-report:multi 2&gt;/dev/null | head -n 1
-Total sales: ₹230 from 6 valid orders, rejected: 3
-$ docker run --rm chai-report:multi whoami
-app
-$ docker run --rm chai-report:1.0 ls /wheels
-psycopg-3.3.6-py3-none-any.whl
-psycopg_binary-3.3.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
-typing_extensions-4.16.0-py3-none-any.whl
-$ docker run --rm chai-report:multi ls /wheels
-ls: cannot access '/wheels': No such file or directory</div>
-  <p>The final image has no <code>/wheels</code> folder (ls: cannot access), runs as <code>app</code>, and still prints ₹230. Its history shows the copied venv (36.1 MB) and our code, nothing else from the builder. Size: 223 MB vs 230 MB. Honest reading: here the gain is small (the wheels) because <code>python:3.12-slim</code> (179 MB on disk) is most of it and nothing had to be compiled. When the builder needs gcc and headers to compile packages, or the base is the full <code>python:3.12</code> image (typically around 1 GB; it could not be pulled in this sandbox, so not measured here), multi-stage builds cut hundreds of MB.</p>
-  <p>Why not just <code>RUN rm -rf /wheels</code> at the end? Layers are stacked: a later layer can only <em>hide</em> a file, the earlier layer still contains it. Measured with a 100 MB file:</p>
-  <div class="fx" data-lang="text">$ cat Dockerfile.two
-FROM python:3.12-slim
-RUN head -c 100000000 /dev/urandom &gt; /tmp/big.bin
-RUN rm /tmp/big.bin
-$ cat Dockerfile.one
-FROM python:3.12-slim
-RUN head -c 100000000 /dev/urandom &gt; /tmp/big.bin &amp;&amp; rm /tmp/big.bin
-$ docker build -q -f Dockerfile.two -t demo:two .
-sha256:d1072cb61e427b06e3ae0810ee3d0d3f86199ed13182a7c984a347019ea142bb
-$ docker build -q -f Dockerfile.one -t demo:one .
-sha256:e883dbd36d3d7c0e0ae3296a6ae24e3cf9b29e6ee7c62fc96fae885a72000385
-$ docker images demo --format 'table {{.Repository}}:{{.Tag}}\\t{{.Size}}'
-REPOSITORY:TAG   SIZE
-demo:one         177MB
-demo:two         377MB
-$ docker history demo:two --format '{{.Size}}\\t{{.CreatedBy}}' | head -n 2
-8.19kB	RUN /bin/sh -c rm /tmp/big.bin # buildkit
-100MB	RUN /bin/sh -c head -c 100000000 /dev/urando…</div>
-  <p>Creating and deleting in two RUNs gave a 377 MB image, in one RUN 177 MB (this Docker reports disk usage; the hidden 100 MB layer is counted twice, packed and unpacked). <code>docker history</code> shows the 100 MB layer still shipping under an 8 kB "rm" layer.</p>
-  <div class="callout anlg"><span class="label">Analogy</span>
-    <p>A kitchen and a tiffin. You cook in a full kitchen (builder stage) with pots, peels and flour everywhere; you pack only the food into the tiffin (final stage). Throwing the peels into the tiffin and then covering them with a napkin (deleting in a later layer) still makes the tiffin heavy.</p>
-  </div>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Multi-stage build</strong>: <code>FROM base AS builder</code> … then <code>FROM base</code> + <code>COPY --from=builder /path /path</code>; only the last stage is shipped. <strong>Small image habits</strong>: slim base, <code>--no-cache-dir</code>, create and delete temporary files in the same <code>RUN</code>, <code>.dockerignore</code>.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Copying a venv between stages only works if both stages use the same base (same Python path and C library); mixing a Debian builder with an Alpine final stage breaks compiled packages.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: Production Traps.</b> The image is now small and non-root. What other habits make a working image dangerous or unreliable in production?</div>
-
-  <h2 id="sd-best"><span class="num">11</span>Production Traps: latest, Secrets, Root</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Everything works. What goes wrong months later on a server: which image is actually running, who can read the database password, and what can a compromised container do to the host?</p>
-  </div>
-  <p><strong>1. <code>:latest</code> drift.</strong> Section 09 showed one tag pointing at two different images within a minute. Two servers pulling <code>latest</code> a day apart run different code, and there is no "previous latest" to roll back to. Deploy version tags or digests.</p>
-  <p><strong>2. Secrets baked into images.</strong> A tempting shortcut is to put the URL in <code>ENV</code> or <code>COPY</code> the env file into the image. Anyone who can pull the image can read every layer:</p>
-  <div class="fx" data-lang="text">$ cat Dockerfile.secret
-FROM chai-report:1.0
-ENV DATABASE_URL=postgresql://chai:chai-secret@db:5432/stall
-COPY chai.env /app/.env
-$ docker build -q -f Dockerfile.secret -t chai-secret .
-sha256:2a7201b479dce2617524336aca22bf7ef5788741efa6682f5eeb44c2c2e131c7
-$ docker history chai-secret --format '{{.CreatedBy}}' | head -n 2
-COPY chai.env /app/.env # buildkit
-ENV DATABASE_URL=postgresql://chai:chai-secr…
-$ docker run --rm chai-secret cat /app/.env
+CMD ["python", "sales_report.py", "sample_orders.csv"]</div>
+  <p>The builder stage creates a virtual environment in <code>/opt/venv</code> and installs the requirements into it; if a package had to be compiled, this is where a line such as <code>RUN apt-get install -y gcc libpq-dev</code> would go, and none of it would reach the final image. The second stage starts again from <code>python:3.12-slim</code>, creates an ordinary user called <code>app</code>, copies the whole venv across in one piece, copies our scripts, puts the venv's <code>bin</code> folder first on the <code>PATH</code> so that <code>python</code> means the venv's Python, and switches to the <code>app</code> user. One caution: copying a venv between stages only works when both stages use the same base image, so that paths and system libraries match.</p>
+  <p>Why not stay with one stage and delete the build tools in a final <code>RUN rm</code>? Because of how layers work. A later layer cannot change an earlier one; deleting a file only adds a whiteout that hides it, and the earlier layer, file included, is still part of the image and is still downloaded by every server. We can see the size effect with archives laid out the way image layers are stored, where a whiteout is an empty file named <code>.wh.</code> followed by the hidden file's name:</p>
+  <div class="fx" data-lang="text">$ mkdir -p run1-layer/tmp run2-layer/tmp single-run-layer/tmp
+$ head -c 50000000 /dev/urandom &gt; run1-layer/tmp/big.bin
+$ touch run2-layer/tmp/.wh.big.bin
+$ sh -c 'head -c 50000000 /dev/urandom &gt; single-run-layer/tmp/big.bin &amp;&amp; rm single-run-layer/tmp/big.bin'
+$ tar -C run1-layer -cf run1-layer.tar . ; tar -C run2-layer -cf run2-layer.tar . ; tar -C single-run-layer -cf single-run-layer.tar .
+$ ls -lh run1-layer.tar run2-layer.tar single-run-layer.tar
+-rw-r--r-- 1 root root 48M Nov 19 05:51 run1-layer.tar
+-rw-r--r-- 1 root root 10K Nov 19 05:51 run2-layer.tar
+-rw-r--r-- 1 root root 10K Nov 19 05:51 single-run-layer.tar
+$ tar -tvf run2-layer.tar
+drwxr-xr-x root/root         0 2026-11-19 05:51 ./
+drwxr-xr-x root/root         0 2026-11-19 05:51 ./tmp/
+-rw-r--r-- root/root         0 2026-11-19 05:51 ./tmp/.wh.big.bin</div>
+  <p>The two-step version produces two layers: the first holds the 50 MB file (48 MB as <code>ls -h</code> counts it), and the second holds nothing but the tiny whiteout marker <code>.wh.big.bin</code>, as <code>tar -tvf</code> shows. Together they still weigh 48 MB, although the file is "deleted". When the file is created and deleted within one single command, the layer records only the end state, and the archive is just 10 KB of headers. The rule follows directly: create and clean up temporary files in the same <code>RUN</code> instruction (for example <code>RUN apt-get update &amp;&amp; apt-get install -y gcc &amp;&amp; rm -rf /var/lib/apt/lists/*</code>), or better, leave them in a builder stage.</p>
+  <p>The same fact about layers makes secrets in images dangerous. It is tempting to write <code>ENV DATABASE_URL=postgresql://chai:chai-secret@db:5432/stall</code> in a Dockerfile, or to <code>COPY</code> an env file into the image. But an image is just a set of layer archives plus a configuration file, and anyone who can pull it can unpack them:</p>
+  <div class="fx" data-lang="text">$ mkdir -p secret-layer/app &amp;&amp; cp chai.env secret-layer/app/.env
+$ tar -C secret-layer -cf layer.tar .
+$ tar -tf layer.tar
+./
+./app/
+./app/.env
+$ tar -xOf layer.tar ./app/.env
 DATABASE_URL=postgresql://chai:chai-secret@db:5432/stall
-CURRENCY=INR
-$ docker run --rm chai-secret printenv DATABASE_URL
-postgresql://chai:chai-secret@db:5432/stall</div>
-  <p><code>docker history</code> shows the ENV line with the password (truncated only by the display width), and any container can simply <code>cat</code> the copied file. <code>.dockerignore</code> protected <code>.env</code> but not <code>chai.env</code>: ignore patterns must cover every secret file. Pass secrets at run time (<code>-e</code>, <code>--env-file</code>, Compose/Kubernetes secrets, a secret manager), or use BuildKit build secrets if the build itself needs one.</p>
-  <p><strong>3. Running as root.</strong> By default the process inside is root (uid 0). If the app is compromised, the attacker is root inside the container, and anything it writes to a bind mount belongs to root on the host:</p>
-  <div class="fx" data-lang="text">$ docker run --rm chai-report:1.0 id
-uid=0(root) gid=0(root) groups=0(root)
-$ docker run --rm chai-report:multi id
-uid=1000(app) gid=1000(app) groups=1000(app)
-$ mkdir -p out
-$ docker run --rm -v "$PWD/out":/out chai-report:1.0 sh -c 'python sales_report.py sample_orders.csv &gt; /out/report.txt 2&gt;&amp;1'
-$ ls -ln out/report.txt
--rw-r--r-- 1 0 0 292 Oct 19 23:59 out/report.txt
-$ docker run --rm -v "$PWD/out":/out chai-report:multi sh -c 'echo test &gt; /out/new.txt'
-sh: 1: cannot create /out/new.txt: Permission denied</div>
-  <p>The 1.0 image runs as uid 0 and its report file on the host is owned by uid 0 (<code>ls -ln</code> prints numbers: <code>0 0</code>), which an ordinary user like meera could not delete. The multi-stage image runs as uid 1000 (<code>app</code>) and could not even write into the root-owned folder ("Permission denied"): the Linux note's permissions, now protecting the host. Give the user only the folders it needs.</p>
-  <p><strong>4. Memory limits and exit 137.</strong> With <code>-m</code>, a container that exceeds its limit is killed by the kernel's OOM killer: exit 137, <code>OOMKilled: true</code>, no traceback (shown for real in the Linux note's section 12). Set limits deliberately and watch for 137.</p>
-  <table class="tbl">
-    <tr><th>Practice</th><th>Why</th></tr>
-    <tr><td>Pin the base and every package (<code>==</code>, lock file)</td><td>Same build next month (typing-extensions surprise in section 04)</td></tr>
-    <tr><td>Version tags / digests, never deploy <code>:latest</code></td><td>Know what runs; roll back</td></tr>
-    <tr><td>No secrets in ENV, COPY or layers</td><td>Every layer is readable by anyone with the image</td></tr>
-    <tr><td><code>USER app</code></td><td>A break-in is not root; host files not owned by root</td></tr>
-    <tr><td>Exec-form CMD + SIGTERM handling</td><td>Clean, fast stops (0 s, exit 0 vs 10 s, 137)</td></tr>
-    <tr><td>One process per container, logs to stdout, healthcheck</td><td>Orchestrators can restart, scale and observe it</td></tr>
-    <tr><td>Big models/data outside the image (volume, object storage)</td><td>Swap data without rebuilding a huge image</td></tr>
-    <tr><td>GPU: <code>nvidia/cuda</code>/<code>pytorch</code> base matching the host driver, <code>--gpus all</code> (not run here)</td><td>CUDA mismatch is the most common GPU image failure</td></tr>
-  </table>
-  <div class="callout def"><span class="label">Definition</span>
-    <p><strong>Reproducible image</strong>: same Dockerfile, pinned base and packages and code commit give an equivalent image. <strong>Attack surface</strong>: everything in the image an attacker could use; fewer tools, no root and no secrets make it smaller.</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap</span>
-    <p>Deleting a pushed secret by rebuilding is not enough: old image versions and caches still contain it. Rotate the password first, exactly as the Git note said for committed secrets.</p>
-  </div>
-  <div class="bridge"><b>What this still can't tell us → next: How It All Connects.</b> Eleven ideas. How do they fit into the single command that starts the stack on the stall's server?</div>
-
-  <h2 id="sd-connect"><span class="num">12</span>How It All Connects</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>What happens, layer by layer, between typing <code>docker compose up -d</code> and the row "2026-10-19 | 230 | 6 | 3" appearing in Postgres?</p>
-  </div>
-  <figure class="viz"><svg viewBox="0 0 660 320" width="660">
-<defs><marker id="sd-a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-<rect x="150" y="10" width="360" height="40" rx="7" class="fs" stroke="currentColor" stroke-opacity="0.5"/><text x="330" y="28" text-anchor="middle" font-size="11.5" font-weight="700">git tag v1.0.0 → Dockerfile (04) → build → chai-report:1.0</text><text x="330" y="43" text-anchor="middle" class="tm" font-size="10">cached layers; pinned psycopg; push/pull via a registry by version tag (09)</text>
-<line x1="330" y1="50" x2="330" y2="68" stroke="currentColor" marker-end="url(#sd-a9)"/>
-<rect x="150" y="70" width="360" height="40" rx="7" class="fb sb"/><text x="330" y="88" text-anchor="middle" font-size="11.5" font-weight="700">docker compose up -d (08)</text><text x="330" y="103" text-anchor="middle" class="tm" font-size="10">network chai_default · volume pgdata · .env fills \${DB_PASSWORD} (07)</text>
-<line x1="230" y1="110" x2="110" y2="138" stroke="currentColor" marker-end="url(#sd-a9)"/><line x1="330" y1="110" x2="330" y2="138" stroke="currentColor" marker-end="url(#sd-a9)"/><line x1="430" y1="110" x2="550" y2="138" stroke="currentColor" marker-end="url(#sd-a9)"/>
-<rect x="10" y="140" width="200" height="54" rx="7" class="fg sg"/><text x="110" y="160" text-anchor="middle" font-size="11">db: postgres:16-alpine</text><text x="110" y="175" text-anchor="middle" class="tm" font-size="10">process + namespaces (02)</text><text x="110" y="188" text-anchor="middle" class="tm" font-size="10">files in volume (06) · healthy</text>
-<rect x="230" y="140" width="200" height="54" rx="7" class="fg sg"/><text x="330" y="160" text-anchor="middle" font-size="11">report: save_report.py</text><text x="330" y="175" text-anchor="middle" class="tm" font-size="10">waits for healthy · DATABASE_URL</text><text x="330" y="188" text-anchor="middle" class="tm" font-size="10">/data bind mount :ro (06)</text>
-<rect x="450" y="140" width="200" height="54" rx="7" class="fg sg"/><text x="550" y="160" text-anchor="middle" font-size="11">board: board.py, PID 1</text><text x="550" y="175" text-anchor="middle" class="tm" font-size="10">0.0.0.0:8000 ← -p 8080 (06)</text><text x="550" y="188" text-anchor="middle" class="tm" font-size="10">exec form, SIGTERM handler (05)</text>
-<line x1="230" y1="167" x2="212" y2="167" stroke="currentColor" marker-end="url(#sd-a9)"/><text x="221" y="215" text-anchor="middle" class="tm" font-size="10">db:5432 by name</text>
-<rect x="150" y="240" width="360" height="56" rx="8" class="ft st"/><text x="330" y="260" text-anchor="middle" font-size="11.5" font-weight="700">daily_sales: 2026-10-19 | 230 | 6 | 3</text><text x="330" y="276" text-anchor="middle" class="tm" font-size="10">survives down/up (volume) · gone only with down -v</text><text x="330" y="290" text-anchor="middle" class="tm" font-size="10">image: slim, non-root, no secrets (10, 11)</text>
-<line x1="330" y1="194" x2="330" y2="238" stroke="currentColor" marker-end="url(#sd-a9)"/>
-</svg><figcaption>One command uses every section: images built from cached layers, containers as isolated processes, a network for names, a volume for data, env for config, ports for the outside world.</figcaption></figure>
-  <table class="tbl"><caption>Every idea on the chai stack</caption>
-    <tr><th>Concept</th><th>Built from</th><th>Answers which question</th><th>Value on the running example</th><th>When to use</th></tr>
-    <tr><td>Containerisation</td><td>image + runtime</td><td>why does it fail elsewhere?</td><td>server: 3.13, no psycopg, no db, no env</td><td>anything that must run on another machine</td></tr>
-    <tr><td>Container</td><td>process + namespaces + cgroups</td><td>VM or not?</td><td>same kernel; PID 1 inside, big PID outside; 100m = 104857600</td><td>always (understand it)</td></tr>
-    <tr><td>Image vs container</td><td>layers + writable layer</td><td>template vs instance?</td><td>/tmp/report.txt gone after rm</td><td>every command</td></tr>
-    <tr><td>Dockerfile &amp; cache</td><td>instructions → layers</td><td>how to build, fast?</td><td>code edit: only step 6 ran; bad order re-ran pip</td><td>every image</td></tr>
-    <tr><td>Build &amp; run</td><td>images + processes</td><td>start, inspect, stop?</td><td>exit 2 passes through; exec 0 s vs shell 137</td><td>daily</td></tr>
-    <tr><td>Ports</td><td>host → container forwarding</td><td>reach a server inside?</td><td>8080→8000; 127.0.0.1 → connection reset</td><td>any server in a container</td></tr>
-    <tr><td>Volumes</td><td>mounts outside the writable layer</td><td>outside files; keep data?</td><td>/data:ro read the 18th (₹655); write refused</td><td>input data, databases</td></tr>
-    <tr><td>Env &amp; config</td><td>process environment</td><td>settings per environment?</td><td>no DATABASE_URL → KeyError</td><td>all config and secrets</td></tr>
-    <tr><td>Compose</td><td>services + network + volumes</td><td>several containers together?</td><td>saved ₹230; table kept after down/up</td><td>multi-container apps, local dev</td></tr>
-    <tr><td>Registry &amp; tags</td><td>push/pull + labels</td><td>move images, name versions?</td><td>same tag latest, two digests</td><td>every deploy</td></tr>
-    <tr><td>Multi-stage</td><td>several FROMs</td><td>ship only runtime?</td><td>230 → 223 MB, no /wheels, user app</td><td>anything with build tools</td></tr>
-    <tr><td>Production traps</td><td>all of the above</td><td>safe after it works?</td><td>password in history; root-owned files</td><td>before the first real deploy</td></tr>
-  </table>
-  <div class="callout intu"><span class="label">Key insight</span><p>One sentence holds the note: <strong>an image is a stack of cached, read-only filesystem layers built from a Dockerfile; a container is an ordinary Linux process started on top of it with its own namespaces, and everything it needs from outside (ports, files, settings, other containers) is plugged in at run time, which is exactly what Compose writes down.</strong></p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Common Mistakes.</b> The usual reasons a container "doesn't work".</div>
+CURRENCY=INR</div>
+  <p>Unpacking the layer prints the password in plain text, with no Docker involved. An <code>ENV</code> line is just as visible: it is stored in the image's configuration, so <code>docker history</code> prints it in the "created by" column and <code>docker run IMAGE printenv</code> prints its value. Deleting the secret in a later layer does not help, for the whiteout reason above. Secrets belong at run time (<code>-e</code>, <code>--env-file</code>, Compose variables from an untracked <code>.env</code>, Kubernetes secrets or a secret manager), and if a password ever does end up in a pushed image, change the password: old copies of the image may already be cached on other machines.</p>
+  <p>Finally, the user. Unless the Dockerfile says otherwise, the process in a container runs as root, user ID 0. If an attacker breaks into the application, they are root inside the container, one kernel bug away from the host, and any file the container writes into a bind mount is owned by root on the host. That is why <code>Dockerfile.multi</code> creates the user <code>app</code> and switches to it with <code>USER app</code>: <code>docker run chai-report:multi id</code> would print <code>uid=1000(app) gid=1000(app)</code> instead of <code>uid=0(root)</code>, and that process could not even write into a host folder owned by root, the Linux permissions you know from the Linux note now protecting the host. Many Kubernetes clusters refuse to run root containers at all.</p>
+  <p>Put together, the habits of a production image are short to state. Pin the base image and every package, so the same Dockerfile builds the same image next month. Deploy version tags or digests, never <code>:latest</code>. Keep secrets out of every layer. Run as a non-root user. Use exec-form <code>CMD</code> and handle <code>SIGTERM</code>, so stops are clean. Run one main process per container, log to standard output, and give servers a health endpoint, so that Compose or Kubernetes can watch and restart them. Keep large data and model files out of the image, in volumes or object storage, so that changing a model does not mean rebuilding and shipping gigabytes. And set memory limits deliberately (<code>-m</code>, or limits in Compose and Kubernetes), remembering that a container that exceeds its limit is killed by the kernel with exit code 137 and no Python traceback at all.</p>
 
   <h2 id="sd-traps"><span class="num">13</span>Common Mistakes</h2>
-  <div class="callout intu"><span class="label">The question we can't answer yet</span>
-    <p>Which mistakes produce the classic symptoms: slow builds, "connection reset", "connection refused", lost data, 10-second stops, leaked passwords?</p>
-  </div>
-  <div class="callout trap"><span class="label">Trap: code copied before requirements</span><p>Every edit reinstalls all packages. Copy <code>requirements.txt</code>, install, then copy code.</p></div>
-  <div class="callout trap"><span class="label">Trap: listening on 127.0.0.1</span><p>Port mapping exists but curl gets "connection reset". Bind <code>0.0.0.0</code> inside containers.</p></div>
-  <div class="callout trap"><span class="label">Trap: localhost to reach another container</span><p><code>localhost</code> is the container itself ("connection refused"). Use the service name on a shared network (<code>db:5432</code>).</p></div>
-  <div class="callout trap"><span class="label">Trap: data in the container layer</span><p>Gone on <code>docker rm</code>. Use a named volume, and remember <code>compose down -v</code> deletes it.</p></div>
-  <div class="callout trap"><span class="label">Trap: shell-form CMD</span><p><code>sh</code> becomes PID 1, SIGTERM never reaches the app, stop takes 10 s and ends in 137. Use <code>CMD ["python", "board.py"]</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: depends_on without healthcheck</span><p>Start order is not readiness. Healthcheck + <code>service_healthy</code> + retries.</p></div>
-  <div class="callout trap"><span class="label">Trap: secrets via ENV or COPY</span><p>Visible in <code>docker history</code> and layers. Inject at run time; cover every secret file in <code>.dockerignore</code>.</p></div>
-  <div class="callout trap"><span class="label">Trap: deploying :latest</span><p>Moving label, no rollback. Use version or git-SHA tags, or digests.</p></div>
-  <div class="callout trap"><span class="label">Trap: unpinned dependencies</span><p>psycopg needed typing-extensions; unpinned transitive packages drift between builds. Pin everything or use a lock file.</p></div>
-  <div class="bridge"><b>What this still can't tell us → next: Revision Sheet.</b> The whole note on one page.</div>
+  <p>The most common slow-build mistake is copying the whole project before installing the dependencies. Every code edit then changes the <code>COPY</code> layer, and the expensive install layer on top of it is rebuilt each time, as section 05's model showed. The fix is to copy the requirements file alone first:</p>
+  <div class="fx" data-lang="text"># Wrong: any code edit reinstalls every package
+COPY . .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Right: the install layer stays cached until requirements.txt changes
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .</div>
+  <p>The most common "it runs but I can't reach it" mistake is a server listening on 127.0.0.1 inside the container. <code>docker ps</code> shows the port mapping, the logs look healthy, and <code>curl</code> still fails with "Connection reset by peer", because forwarded traffic arrives on the container's network card, not on its loopback. Make the server listen on <code>0.0.0.0</code>. Its twin is using <code>localhost</code> to reach another container: <code>localhost</code> is always the container itself, so a saver with <code>DATABASE_URL=...@localhost:5432/...</code> gets "connection refused". Use the other container's service name on a shared network, <code>db:5432</code>.</p>
+  <p>A shell-form command makes every stop slow and violent:</p>
+  <div class="fx" data-lang="text"># Wrong: /bin/sh is PID 1, SIGTERM never reaches Python, stop waits 10 s, exit 137
+CMD python board.py
+
+# Right: Python is PID 1 and receives SIGTERM directly
+CMD ["python", "board.py"]</div>
+  <p>Several mistakes come from forgetting that a container's writable layer is temporary. Data a container writes to its own filesystem disappears with <code>docker rm</code>, so anything that must persist needs a volume. Fixing a problem by running <code>docker exec ... pip install</code> inside a running container repairs only that one container, and the fix vanishes on the next deployment; every change belongs in the Dockerfile, followed by a rebuild. And <code>docker compose down -v</code> deletes named volumes, including the database.</p>
+  <p>In Compose, writing <code>depends_on: [db]</code> without a healthcheck only orders the start-up; it does not wait for Postgres to be ready, so the saver fails on a cold start. Use a healthcheck with <code>condition: service_healthy</code>, and still retry connections in long-running programs:</p>
+  <div class="fx" data-lang="text"># Wrong: only waits for the db container to start
+depends_on: [db]
+
+# Right: waits for the db healthcheck to pass
+depends_on:
+  db:
+    condition: service_healthy</div>
+  <p>Finally, three habits cause trouble months later rather than today. Secrets written with <code>ENV</code> or copied in with <code>COPY</code> are readable by anyone who has the image. Deploying <code>:latest</code> means you cannot say which code is running or roll back to the previous version. And unpinned dependencies, including indirect ones such as psycopg's <code>typing-extensions</code>, let two builds of the same Dockerfile produce different images.</p>
 
   <h2 id="sd-rev"><span class="num">R</span>Revision Sheet</h2>
-  <p>Running example: image <code>chai-report:1.0</code> = <code>python:3.12-slim</code> + psycopg 3.3.6 (+ typing-extensions 4.16.0) + <code>sales_report.py</code>, <code>board.py</code>, <code>save_report.py</code>, sample sheet; default command prints <strong>Total sales: ₹230 from 6 valid orders, rejected: 3</strong>. <code>compose.yaml</code>: <code>db</code> (postgres:16-alpine, volume pgdata, healthcheck), <code>report</code> (saves into <code>daily_sales</code>: 2026-10-19 | 230 | 6 | 3), <code>board</code> (8080→8000). Sizes: base 179 MB, single-stage 230 MB, multi-stage 223 MB.</p>
-  <h3>The question ladder</h3>
-  <table class="tbl">
-    <tr><th>Idea</th><th>Question it answers</th><th>On our stack</th><th>Weakness → next</th></tr>
-    <tr><td>Works on my machine</td><td>why does it fail elsewhere?</td><td>3.13, no psycopg, no db, no env</td><td>what to ship?</td></tr>
-    <tr><td>Container</td><td>VM or not?</td><td>same kernel, own PIDs, cgroup limit</td><td>where do files come from?</td></tr>
-    <tr><td>Image vs container</td><td>template vs instance?</td><td>writes vanish with the container</td><td>how to make an image?</td></tr>
-    <tr><td>Dockerfile &amp; cache</td><td>recipe, fast rebuilds?</td><td>only the COPY code step reran</td><td>how to run it?</td></tr>
-    <tr><td>Build &amp; run</td><td>run, inspect, stop?</td><td>exit 2 passes; shell form → 137</td><td>sealed box</td></tr>
-    <tr><td>Ports &amp; volumes</td><td>doors and storage?</td><td>8080→8000; /data:ro; chai-out</td><td>settings</td></tr>
-    <tr><td>Env &amp; config</td><td>per-environment settings?</td><td>KeyError without DATABASE_URL</td><td>a database container</td></tr>
-    <tr><td>Compose</td><td>several containers?</td><td>db by name; healthy; volume kept</td><td>moving images</td></tr>
-    <tr><td>Registries</td><td>ship images?</td><td>push/pull; latest moved</td><td>image size</td></tr>
-    <tr><td>Multi-stage</td><td>ship only runtime?</td><td>no /wheels, user app</td><td>production habits</td></tr>
-    <tr><td>Traps</td><td>safe in production?</td><td>password in history; root files</td><td>→ CI/CD, Kubernetes</td></tr>
-  </table>
-  <h3>Definitions and syntax</h3>
+  <h3>Core definitions</h3>
   <ul>
-    <li><strong>Container</strong> = process + namespaces (pid, mnt, net, uts…) + cgroups (memory, CPU); shares the host kernel. <strong>Image</strong> = read-only layers + config. <strong>Writable layer</strong> = per container, deleted with it.</li>
-    <li><strong>Dockerfile</strong>: <code>FROM</code>, <code>WORKDIR</code>, <code>COPY</code>, <code>RUN</code>, <code>ENV</code>, <code>USER</code>, <code>EXPOSE</code> (docs only), <code>CMD</code> (default, overridable), <code>ENTRYPOINT</code> (fixed program). Cache: a changed step rebuilds it and all later steps. <code>.dockerignore</code>.</li>
-    <li><strong>CLI</strong>: <code>build -t n:t .</code>, <code>run --rm/-d/--name/-p/-v/-e/--env-file/-m</code>, <code>ps -a</code>, <code>logs -f</code>, <code>exec -it</code>, <code>top</code>, <code>stop</code> (SIGTERM, SIGKILL after 10 s), <code>rm</code>, <code>rmi</code>, <code>images</code>, <code>history</code>, <code>diff</code>, <code>inspect</code>.</li>
-    <li><strong>Ports</strong>: <code>-p HOST:CONTAINER</code>; app binds 0.0.0.0. <strong>Volumes</strong>: bind <code>-v /host:/path[:ro]</code>, named <code>-v name:/path</code>, <code>--tmpfs</code>.</li>
-    <li><strong>Networking</strong>: user-defined network/Compose → names resolve; <code>localhost</code> = the container itself; <code>-p</code> only for traffic from outside Docker.</li>
-    <li><strong>Compose</strong>: <code>services</code>, <code>image</code>/<code>build</code>, <code>command</code>, <code>environment</code>, <code>ports</code>, <code>volumes</code>, <code>depends_on: condition: service_healthy</code>, <code>healthcheck</code>; <code>up -d</code>, <code>ps -a</code>, <code>logs</code>, <code>exec</code>, <code>run --rm</code>, <code>down</code> (keeps volumes), <code>down -v</code>.</li>
-    <li><strong>Registry</strong>: <code>host/name:tag</code>; <code>tag</code>, <code>push</code>, <code>pull</code>; tag = movable label, digest = <code>sha256:…</code> exact content; default tag <code>latest</code>.</li>
-    <li><strong>Multi-stage</strong>: <code>FROM … AS builder</code>, <code>COPY --from=builder</code>; deleting in a later layer does not shrink the image.</li>
-    <li><strong>Exit codes</strong>: pass through <code>docker run</code>; 137 = SIGKILL (OOM or stop timeout), 143 = SIGTERM unhandled.</li>
+    <li><b>Containerisation</b>: shipping a program together with its whole environment so it runs identically everywhere.</li>
+    <li><b>Container</b>: an ordinary process isolated with <b>namespaces</b> (own PIDs, hostname, network, mounts) and limited by <b>cgroups</b> (memory, CPU), sharing the host kernel.</li>
+    <li><b>Image</b>: read-only stack of layers + metadata (default command, env, user). <b>Layer</b>: the file changes made by one build step.</li>
+    <li><b>Writable layer</b>: each container's private top layer; deleted with the container. Changes use copy-on-write; deletions are whiteouts.</li>
+    <li><b>Docker client / daemon</b>: <code>docker</code> sends requests over <code>/var/run/docker.sock</code> to <code>dockerd</code>, which does the work.</li>
+    <li><b>Build context</b>: the folder sent to the build; <code>.dockerignore</code> excludes paths from it.</li>
+    <li><b>Registry</b>: server that stores images. <b>Tag</b>: movable label. <b>Digest</b>: <code>sha256:…</code> of the content, never changes.</li>
   </ul>
-  <h3>When to use, when not</h3>
-  <div class="cards">
-    <div><b>Container</b><p>Anything that must run the same on several machines.</p><small>Not a security boundary on its own</small></div>
-    <div><b>Bind mount</b><p>Input data, live code in development.</p><small>Tied to host paths and permissions</small></div>
-    <div><b>Named volume</b><p>Databases and outputs that must persist.</p><small>Not for code</small></div>
-    <div><b>Compose</b><p>Multi-container apps on one machine, local dev, small servers.</p><small>Clusters use Kubernetes</small></div>
-    <div><b>Multi-stage</b><p>Anything with build tools or downloaded installers.</p><small>Same base in both stages</small></div>
-    <div><b>Version tags / digests</b><p>Every deploy.</p><small>Never deploy <code>:latest</code></small></div>
-  </div>
-  <div class="callout trap"><span class="label">Key traps</span><p>COPY . . before pip install; listening on 127.0.0.1; localhost for another container; data in the writable layer; <code>down -v</code>; shell-form CMD; depends_on without healthcheck; secrets in ENV/COPY/layers; <code>:latest</code>; running as root; unpinned dependencies; deleting files in a later layer.</p></div>
-  <h3>Five rapid-fire checks</h3>
+  <h3>Container vs VM vs virtualenv</h3>
   <table class="tbl">
-    <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Why is <code>uname -r</code> the same inside and outside a container?</td><td>Containers share the host kernel; only the userspace files differ</td></tr>
-    <tr><td>You edit <code>sales_report.py</code>. Which steps of our Dockerfile rebuild?</td><td>Only the final <code>COPY</code> of the code (pip install stays cached)</td></tr>
-    <tr><td>Why did <code>docker stop sf</code> take 10 s and exit 137?</td><td><code>sh</code> was PID 1 and did not forward SIGTERM; Docker sent SIGKILL after the timeout</td></tr>
-    <tr><td>The saver in Compose uses <code>localhost:5432</code>. What happens?</td><td>Connection refused: localhost is the saver's own container; use <code>db:5432</code></td></tr>
-    <tr><td>After <code>docker compose down</code> and <code>up</code>, is the table still there?</td><td>Yes, the named volume survives; only <code>down -v</code> deletes it</td></tr>
+    <tr><th></th><th>Virtual machine</th><th>Container</th><th>virtualenv</th></tr>
+    <tr><td>Isolates</td><td>a whole computer</td><td>a process's view of files, PIDs, network</td><td>Python packages only</td></tr>
+    <tr><td>Kernel</td><td>its own</td><td>shares the host's</td><td>the host's</td></tr>
+    <tr><td>Size, start-up</td><td>GBs, tens of seconds to minutes</td><td>MBs, under a second</td><td>MBs, instant</td></tr>
+    <tr><td>Isolation strength</td><td>strong</td><td>weaker (shared kernel)</td><td>none (same OS)</td></tr>
   </table>
+  <h3>Dockerfile</h3>
+  <div class="fx" data-lang="text">FROM python:3.12-slim AS builder        # base image; name the stage
+RUN python -m venv /opt/venv            # build-time command → layer
+COPY requirements.txt .                 # from build context
+RUN /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
-  <h2 id="sd-qa"><span class="num">14</span>Questions &amp; Answers</h2>
+FROM python:3.12-slim                   # final stage: only this is shipped
+RUN useradd --create-home app
+WORKDIR /app                            # mkdir + cd
+COPY --from=builder /opt/venv /opt/venv # take only the result
+COPY . .                                # code last (cache)
+ENV PATH="/opt/venv/bin:$PATH" PYTHONUNBUFFERED=1
+USER app                                # not root
+EXPOSE 8000                             # documentation only
+CMD ["python", "board.py"]              # exec form, default command</div>
+  <h3>Commands</h3>
+  <table class="tbl">
+    <tr><th>Command</th><th>What it does</th></tr>
+    <tr><td><code>docker build -t name:tag .</code></td><td>build an image from the Dockerfile in <code>.</code></td></tr>
+    <tr><td><code>docker run --rm -d --name N -p 8080:8000 -v SRC:/dst[:ro] -e K=V IMG [cmd]</code></td><td>start a container (options as needed)</td></tr>
+    <tr><td><code>docker ps -a</code> / <code>docker images</code></td><td>list containers / images</td></tr>
+    <tr><td><code>docker logs -f N</code> / <code>docker exec -it N sh</code></td><td>follow output / shell inside a running container</td></tr>
+    <tr><td><code>docker stop N</code></td><td>SIGTERM, then SIGKILL after 10 s</td></tr>
+    <tr><td><code>docker rm</code> / <code>docker rmi</code></td><td>delete container / image</td></tr>
+    <tr><td><code>docker history IMG</code> / <code>docker diff N</code></td><td>layers and sizes / a container's changes</td></tr>
+    <tr><td><code>docker tag</code>, <code>push</code>, <code>pull</code></td><td>name, upload, download images</td></tr>
+    <tr><td><code>docker compose up -d</code> / <code>ps -a</code> / <code>logs</code> / <code>exec</code> / <code>run --rm</code></td><td>start stack / status / output / command in service / one-off job</td></tr>
+    <tr><td><code>docker compose down</code> / <code>down -v</code></td><td>remove containers + network / also delete volumes</td></tr>
+  </table>
+  <h3>Run-time plumbing</h3>
+  <ul>
+    <li><b>Ports</b>: <code>-p HOST:CONTAINER</code>; the app must listen on <code>0.0.0.0</code>.</li>
+    <li><b>Bind mount</b> <code>-v /host/dir:/path[:ro]</code>: host folder inside; for input data and live code.</li>
+    <li><b>Named volume</b> <code>-v name:/path</code>: Docker-managed, survives containers; for databases.</li>
+    <li><b>Config</b>: <code>-e</code>, <code>--env-file</code>, Compose <code>environment:</code>; <code>ENV</code> only for harmless defaults.</li>
+    <li><b>Networking</b>: on a user-defined or Compose network, containers reach each other by name; <code>localhost</code> = the container itself.</li>
+    <li><b>Exit codes</b> pass through <code>docker run</code>; 137 = SIGKILL (stop timeout or out of memory), 143 = SIGTERM.</li>
+  </ul>
+  <h3>Gotchas</h3>
+  <ul>
+    <li><code>COPY . .</code> before <code>pip install</code> → every edit reinstalls everything.</li>
+    <li>A changed step rebuilds itself and every later step.</li>
+    <li>Shell-form <code>CMD</code> → <code>sh</code> is PID 1 → 10-second stop, exit 137.</li>
+    <li>PID 1 ignores signals it has no handler for.</li>
+    <li>Server on 127.0.0.1 inside a container → "connection reset".</li>
+    <li>Files written in the container layer vanish on <code>docker rm</code>; <code>down -v</code> deletes volumes.</li>
+    <li><code>depends_on</code> alone does not wait for readiness; add a healthcheck.</li>
+    <li>Deleting a file in a later layer does not shrink the image.</li>
+    <li>Secrets in <code>ENV</code>/<code>COPY</code> are readable from the image.</li>
+    <li><code>:latest</code> moves; deploy version tags or digests.</li>
+  </ul>
+
+  <h2 id="sd-qa"><span class="num">14</span>Interview Questions</h2>
   <div class="qa-head"><h3>Answer out loud before revealing</h3><button class="reveal-all" id="revealAll">Reveal all</button></div>
-  <details class="qa"><summary><span class="qmark">Q</span>Image vs container?</summary><div class="qa-body">An image is an immutable, layered template built from a Dockerfile. A container is a running (or stopped) instance of it with its own writable layer, process and network. One image can run as many containers.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Container vs VM?</summary><div class="qa-body">A VM virtualises hardware and runs a full guest kernel (heavy, slow to boot, strong isolation). A container is a process isolated with namespaces and cgroups on the host kernel (light, starts in under a second, weaker isolation). <code>uname -r</code> inside shows the host's kernel.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Docker vs virtualenv?</summary><div class="qa-body">A virtualenv isolates Python packages only; it uses the machine's interpreter and system libraries and cannot provide services. An image pins OS libraries, the Python version, packages and default config; Compose adds services like Postgres.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Every small code change makes the build reinstall all packages. Why and how to fix?</summary><div class="qa-body">The Dockerfile copies all code before <code>pip install</code>, so any edit invalidates that layer and every later one. Copy <code>requirements.txt</code> first, install, then copy the code.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What is a multi-stage build and why use it?</summary><div class="qa-body">Several <code>FROM</code> stages in one Dockerfile; the final stage copies only the needed artefacts (<code>COPY --from=builder</code>). Compilers, caches and installers stay out of the shipped image: smaller and safer.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your container runs but curl from the host gets "connection reset". Causes?</summary><div class="qa-body">(1) The app listens on 127.0.0.1 inside the container: bind 0.0.0.0. (2) Missing or reversed <code>-p</code> (host:container). (3) The app crashed or is still starting: check <code>docker logs</code>.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Your app cannot reach Postgres at <code>localhost:5432</code> in Compose. Why?</summary><div class="qa-body"><code>localhost</code> is the app's own container. Use the service name, <code>db:5432</code>, and wait for readiness (healthcheck + <code>service_healthy</code> + retries).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>What does <code>EXPOSE 8000</code> do?</summary><div class="qa-body">It only documents the port (and lets <code>-P</code> pick it). You still need <code>-p host:container</code> to publish it.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>CMD vs ENTRYPOINT? Exec vs shell form?</summary><div class="qa-body"><code>ENTRYPOINT</code> fixes the executable; <code>CMD</code> gives defaults that <code>docker run img …</code> overrides. Exec form (<code>["python", "board.py"]</code>) makes the app PID 1 so it receives SIGTERM; shell form puts <code>/bin/sh</code> in front, so <code>docker stop</code> waits 10 s and SIGKILLs (137).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Container A writes <code>/tmp/x.txt</code>, is removed, then <code>docker run --rm img cat /tmp/x.txt</code>. Output?</summary><div class="qa-body"><code>cat: /tmp/x.txt: No such file or directory</code>. Each container starts from the clean image; A's writable layer died with it. Use a volume to persist.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Named volume vs bind mount?</summary><div class="qa-body">Named volume: Docker-managed storage, portable, for databases and outputs. Bind mount: a specific host folder, for input data and live development, tied to that host's paths and permissions; add <code>:ro</code> when the container should only read.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why not use <code>:latest</code> in production?</summary><div class="qa-body">It is mutable: two servers can pull different images under the same tag (we pushed two digests as latest), and you cannot roll back to "the previous latest". Use version or git-SHA tags, or digests.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>How do you pass a database password to a container?</summary><div class="qa-body">At run time: <code>-e</code>/<code>--env-file</code>, Compose variables from an untracked <code>.env</code>, Kubernetes secrets or a secret manager. Never <code>ENV</code> or <code>COPY</code> it in the Dockerfile: <code>docker history</code> and the layers reveal it.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A container keeps dying with exit code 137. What do you check?</summary><div class="qa-body">137 = SIGKILL. Check <code>docker inspect --format '{{.State.OOMKilled}}'</code> and <code>dmesg</code> for the OOM killer (memory limit), and whether a <code>docker stop</code> timed out because SIGTERM was ignored (shell-form CMD, no handler).</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Why run as a non-root user?</summary><div class="qa-body">A compromised app gets an unprivileged user, files it writes to mounts are not root-owned on the host, and many clusters enforce it. Our multi-stage image ran as uid 1000 and could not write into a root-owned folder.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>You deleted a large file in a later RUN, but the image did not shrink. Why?</summary><div class="qa-body">Layers stack; the later layer only hides the file (377 MB vs 177 MB here). Create and delete in the same RUN, or use a multi-stage build.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does the Linux note's PID and signal knowledge explain the 10-second stop?</summary><div class="qa-body">A container's main process is PID 1 in its namespace. <code>docker stop</code> = SIGTERM to PID 1, then SIGKILL after 10 s. If PID 1 is <code>sh</code> (shell form) it does not forward the signal, so the app is killed with 137 = 128 + 9, exactly the Linux note's exit-code rule.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: why does Compose need both a network and a volume for the database?</summary><div class="qa-body">The network gives the stable name <code>db</code> the saver connects to (IPs change on restart, localhost is the wrong container); the volume keeps Postgres's files outside the container's writable layer, so <code>down</code>/<code>up</code> or an upgrade keeps the table. Without the network nothing connects; without the volume every restart loses the data.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: what breaks if you build images from an untagged working folder instead of a Git tag?</summary><div class="qa-body">You cannot say which code is inside an image, two builds of "the same" version can differ, and a rollback has nothing to point at. Build from a tagged commit (v1.0.0), tag the image with the same version, pin dependencies: code version, image version and environment then line up, which is the reproducibility the Git note started.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>Connection: how do env vars, ports and permissions from the Linux note reappear in Docker?</summary><div class="qa-body">Env vars: <code>-e</code> / <code>environment:</code> are the same inherited process environment (KeyError without DATABASE_URL). Ports: a server must listen on an interface reachable from outside its network namespace (0.0.0.0). Permissions: the container's user ID decides file access on bind mounts (root-owned report; Permission denied for uid 1000).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is Docker, and what problem does it solve?</summary><div class="qa-body">Docker packages an application together with its runtime environment (OS libraries, language version, dependencies, default configuration) into an image, and runs that image as an isolated container on any machine with Docker. It solves the "works on my machine" problem, where code fails elsewhere because the interpreter, libraries, services or settings differ. It also makes deployments repeatable, because the exact image that was tested is the one that runs in production.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a container and a virtual machine?</summary><div class="qa-body">A VM emulates a whole computer and boots its own operating-system kernel, so it is heavy (gigabytes) and slow to start, but strongly isolated. A container is an ordinary process isolated by the host kernel's namespaces and limited by cgroups; it shares the host kernel, so it is light and starts in under a second, but isolation is weaker. You can see this because <code>uname -r</code> prints the host's kernel version inside a container.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between an image and a container?</summary><div class="qa-body">An image is a read-only template made of layers plus metadata such as the default command. A container is a running (or stopped) instance created from an image, with its own writable layer, process and network. One image can run as many containers at once, and none of them change the image, much like a class and its objects.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What are namespaces and cgroups?</summary><div class="qa-body">Both are Linux kernel features. Namespaces give a process its own private view of a global resource: its own process list (PID), hostname (UTS), network interfaces (net), mount points (mnt) and more. Cgroups limit and measure the resources a group of processes may use, such as memory and CPU. A container is a process started in new namespaces inside a cgroup, with its own root filesystem.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is an image layer, and how does the build cache work?</summary><div class="qa-body">Each Dockerfile instruction that changes files produces a layer containing just those changes. Docker caches each layer under a key made from the parent layer, the instruction text and, for <code>COPY</code>/<code>ADD</code>, a checksum of the copied files. If the key matches on the next build, the layer is reused; once one step misses, every later step is rebuilt because its parent changed.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Every small code change makes the build reinstall all packages. Why, and how do you fix it?</summary><div class="qa-body">The Dockerfile copies the whole project before <code>pip install</code>, so any code edit changes the <code>COPY</code> layer and invalidates the install layer above it. Copy <code>requirements.txt</code> on its own, run the install, and copy the code afterwards. In general, order instructions from least to most frequently changing.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between <code>CMD</code> and <code>ENTRYPOINT</code>? Between exec form and shell form?</summary><div class="qa-body"><code>ENTRYPOINT</code> fixes the executable that always runs; <code>CMD</code> provides the default command or default arguments, which anything after the image name in <code>docker run</code> replaces. Exec form, a JSON list like <code>["python", "app.py"]</code>, runs the program directly as PID 1. Shell form, plain text, runs it via <code>/bin/sh -c</code>, so the shell is PID 1 and signals may never reach the app.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why does <code>docker stop</code> sometimes take 10 seconds and leave exit code 137?</summary><div class="qa-body"><code>docker stop</code> sends SIGTERM to the container's PID 1, waits 10 seconds, then sends SIGKILL; 137 is 128 + 9, killed by SIGKILL. It happens when PID 1 does not handle SIGTERM: the kernel ignores unhandled signals for PID 1, and a shell-form <code>CMD</code> puts <code>sh</code>, which does not forward the signal, in front of the app. Use exec form, handle SIGTERM in the app, or run with <code>--init</code>.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What does <code>-p 8080:8000</code> do, and what does <code>EXPOSE</code> do?</summary><div class="qa-body"><code>-p 8080:8000</code> publishes a port: connections to port 8080 on the host are forwarded to port 8000 inside the container (host first, container second). <code>EXPOSE 8000</code> in a Dockerfile only documents which port the app uses; it publishes nothing by itself.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Your container is running and the port is mapped, but <code>curl</code> from the host gets "connection reset". What is the likely cause?</summary><div class="qa-body">The server inside is listening on 127.0.0.1, which inside a container means the container's own loopback interface. Forwarded traffic arrives on the container's virtual network card, so it is refused. Make the server listen on 0.0.0.0. Other causes to check are a reversed <code>-p</code> mapping and an app that crashed or is still starting (<code>docker logs</code>).</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a bind mount and a named volume?</summary><div class="qa-body">A bind mount makes a specific host folder appear inside the container; it is tied to that host's paths and permissions and is ideal for input data and live code in development. A named volume is storage created and managed by Docker that survives containers and does not depend on host paths; it is the normal choice for database files. Both bypass the container's writable layer, so their data outlives the container.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A container writes <code>/tmp/x.txt</code> and is removed. A new container from the same image runs <code>cat /tmp/x.txt</code>. What happens?</summary><div class="qa-body">It fails with "No such file or directory". The file lived in the first container's writable layer, which was deleted with it, and every new container starts from the unchanged image. Data that must persist belongs in a volume.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do containers in Docker Compose talk to each other? Why doesn't <code>localhost</code> work?</summary><div class="qa-body">Compose puts all services on one network with built-in DNS, so each service is reachable by its service name, for example <code>db:5432</code>, whatever its current IP address. <code>localhost</code> inside a container refers to that container's own network namespace, so connecting to <code>localhost:5432</code> from the app reaches the app's own container, where no database runs.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Does <code>depends_on</code> make a service wait until the database is ready?</summary><div class="qa-body">Not by itself: it only controls start order, and a database needs a few seconds after starting before it accepts connections. Add a <code>healthcheck</code> to the database (for Postgres, <code>pg_isready</code>) and use <code>depends_on</code> with <code>condition: service_healthy</code>. Applications should still retry connections, since the database can restart later.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is the difference between a tag and a digest? Why avoid <code>:latest</code> in production?</summary><div class="qa-body">A tag is a movable, human-friendly label; a digest is a SHA-256 hash of the image content and always refers to exactly the same bytes. <code>latest</code> is just the default tag and moves whenever someone pushes it, so two servers can run different code under the same name and there is nothing to roll back to. Deploy immutable tags tied to the code, such as the Git tag or commit SHA, or pin the digest.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>What is a multi-stage build and why use it?</summary><div class="qa-body">A Dockerfile with several <code>FROM</code> stages: an early builder stage installs or compiles everything, and the final stage starts from a clean base and copies in only the results with <code>COPY --from=builder</code>. Only the final stage is shipped, so compilers, caches and installers stay out of the image. The result is smaller, faster to pull and has less for an attacker to use.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>You deleted a large file in a later <code>RUN</code>, but the image did not get smaller. Why?</summary><div class="qa-body">Layers are immutable and stacked. The layer that created the file still contains it, and the later layer only adds a whiteout marker that hides it, so the bytes are still shipped. Create and delete temporary files within the same <code>RUN</code>, or keep them in a builder stage of a multi-stage build.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How should you pass a database password to a container?</summary><div class="qa-body">At run time: <code>-e</code> or <code>--env-file</code>, Compose variables from an untracked <code>.env</code> file, Kubernetes secrets or a secret manager. Never put it in <code>ENV</code> or <code>COPY</code> it into the image, because image layers and configuration can be read by anyone who can pull the image, for example with <code>docker history</code>. If a secret does leak into an image, rotate it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>Why run containers as a non-root user?</summary><div class="qa-body">By default the container process is root (uid 0). If the app is compromised, the attacker is root inside the container and closer to escaping to the host, and files written to bind mounts become root-owned on the host. Creating a user and adding <code>USER app</code> limits the damage, and many clusters require it.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>How do Docker Compose and Kubernetes relate?</summary><div class="qa-body">Both run containers from images. Compose describes a multi-container application on a single machine in one YAML file and is used for local development and small deployments. Kubernetes runs containers across a cluster of machines, with scheduling, self-healing restarts, scaling and rolling updates; it uses the same images and similar ideas, such as services found by name, volumes and injected configuration.</div></details>
 </main>
 `
 });
