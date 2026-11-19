@@ -122,10 +122,10 @@ def start_response(status, headers):
 
 environ = EnvironBuilder(method="GET", path="/v1/restaurants").get_environ()
 print(b"".join(app(environ, start_response)))</div>
-  <div class="fx" data-lang="text">Map([&lt;Rule '/static/&lt;filename&gt;' (GET, HEAD, OPTIONS) -&gt; static&gt;,
- &lt;Rule '/v1/restaurants' (GET, HEAD, OPTIONS) -&gt; list_restaurants&gt;])
+  <div class="fx" data-lang="text">Map([&lt;Rule '/static/&lt;filename&gt;' (HEAD, OPTIONS, GET) -&gt; static&gt;,
+ &lt;Rule '/v1/restaurants' (HEAD, OPTIONS, GET) -&gt; list_restaurants&gt;])
 200 OK [('Content-Type', 'application/json'), ('Content-Length', '38')]
-b'{"items":["Dosa Hut","Biryani Bros"]}\n'</div>
+b'{"items":["Dosa Hut","Biryani Bros"]}\\n'</div>
   <p>The first two lines of output are the app's <code>url_map</code>, the routing table the decorator filled in. Our rule is there with GET, plus HEAD and OPTIONS, which Flask answers for free; the <code>/static/&lt;filename&gt;</code> rule is added automatically for serving files such as images. The last two lines show that the Flask app really is a WSGI callable: given an <code>environ</code>, it called <code>start_response</code> with <code>200 OK</code>, turned our dictionary into JSON, and even added a <code>Content-Length</code> header for us.</p>
   <p>Now let us serve it over a real network. The command <code>flask --app hello run</code> starts Werkzeug's development server (Werkzeug is the toolkit Flask is built on), which opens a port, turns each incoming HTTP request into an <code>environ</code>, and calls the app. Here <code>hello.py</code> contains just the app part of the block above, and <code>curl</code> is a command-line HTTP client:</p>
   <div class="fx" data-lang="py">from flask import Flask
@@ -139,14 +139,14 @@ def list_restaurants():
 $ curl -si localhost:18201/v1/restaurants        # terminal 2: a client
 HTTP/1.1 200 OK
 Server: Werkzeug/3.1.9 Python/3.13.18
-Date: Thu, 19 Nov 2026 07:33:02 GMT
+Date: Thu, 19 Nov 2026 07:33:48 GMT
 Content-Type: application/json
 Content-Length: 38
 Connection: close
 
 {"items":["Dosa Hut","Biryani Bros"]}
 
-$ curl -s -o /dev/null -w '%{http_code}\n' localhost:18201/v1/menus        # terminal 2: a client
+$ curl -s -o /dev/null -w '%{http_code}\\n' localhost:18201/v1/menus        # terminal 2: a client
 404
 
 --- what terminal 1 printed ---
@@ -155,8 +155,8 @@ $ curl -s -o /dev/null -w '%{http_code}\n' localhost:18201/v1/menus        # ter
 WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
  * Running on http://127.0.0.1:18201
 Press CTRL+C to quit
-127.0.0.1 - - [19/Nov/2026 07:33:02] "GET /v1/restaurants HTTP/1.1" 200 -
-127.0.0.1 - - [19/Nov/2026 07:33:02] "GET /v1/menus HTTP/1.1" 404 -</div>
+127.0.0.1 - - [19/Nov/2026 07:33:48] "GET /v1/restaurants HTTP/1.1" 200 -
+127.0.0.1 - - [19/Nov/2026 07:33:48] "GET /v1/menus HTTP/1.1" 404 -</div>
   <p>The server said it was <code>Running on http://127.0.0.1:18201</code>, so it was listening on port 18201 of this machine. The first curl received a full HTTP response: status line, headers (including <code>Server: Werkzeug</code>, added by the development server) and our JSON body. The second asked for a path that has no route, so Flask answered 404 by itself. The server printed one log line per request with the method, path and status.</p>
   <p>Notice the warning in the server's output. The development server handles requests in a simple way, is not hardened against attacks, and is meant only for your own machine. It also has a debug mode (<code>flask run --debug</code> or <code>app.run(debug=True)</code>) that shows an interactive Python console in the browser whenever a view crashes; on a server reachable by others, that lets anyone who can trigger an error run code on your machine. In production the very same app object is handed to a production WSGI server such as <strong>gunicorn</strong> (<code>gunicorn hello:app</code>), which runs several copies of it; section 09 measures what that means.</p>
 
@@ -192,7 +192,7 @@ print("Allow header on the 405:", r.headers["Allow"])</div>
 GET    /v1/restaurants/99   -&gt; 404 NOT FOUND          {'error': 'restaurant not found'}
 GET    /v1/restaurants/abc  -&gt; 404 NOT FOUND          (Flask's own HTML error page)
 DELETE /v1/restaurants/11   -&gt; 405 METHOD NOT ALLOWED (Flask's own HTML error page)
-Allow header on the 405: OPTIONS, GET, HEAD</div>
+Allow header on the 405: HEAD, GET, OPTIONS</div>
   <p>Each line of output is one request. <code>/v1/restaurants/11</code> matched the rule, the converter turned "11" into 11, and the view returned Biryani Bros as JSON. <code>/v1/restaurants/99</code> also matched, the view ran, found no restaurant 99 and returned <em>our</em> JSON error with 404. <code>/v1/restaurants/abc</code> looks similar but is completely different: "abc" is not an integer, so the rule never matched, our function never ran, and Flask produced its own HTML 404 page. The DELETE matched the path but not the method, so Flask answered 405 and the <code>Allow</code> header says only GET, HEAD and OPTIONS are accepted. Telling these two kinds of 404 apart matters when you debug: if your view is not even being called, the route pattern or converter is the problem.</p>
   <p>The built-in converters are <code>string</code> (the default; anything without a slash), <code>int</code>, <code>float</code>, <code>path</code> (like string but allows slashes) and <code>uuid</code>. The decorators <code>@app.get</code>, <code>@app.post</code>, <code>@app.put</code>, <code>@app.patch</code> and <code>@app.delete</code> are shortcuts for the older, general form <code>@app.route("/path", methods=["GET", "POST"])</code>, which you will see in a lot of existing code. Every rule also has an <strong>endpoint</strong> name, by default the function's name, and <code>url_for("get_restaurant", rid=11)</code> builds the matching URL from it, so templates and redirects do not need to hard-code paths.</p>
 
@@ -415,7 +415,7 @@ INFO req-2 DELETE /v1/restaurants/10 -&gt; 405 in 0.1 ms
 ERROR request req-3 crashed: KeyError(12)
 INFO req-3 GET /v1/restaurants/12/menu -&gt; 500 in 0.1 ms
    client got: 500 {'error': 'internal_error', 'request_id': 'req-3'} | X-Request-ID: req-3
-INFO req-4 GET /v1/restaurants/10 -&gt; 503 in 0.0 ms
+INFO req-4 GET /v1/restaurants/10 -&gt; 503 in 0.1 ms
    client got: 503 {'error': 'down for maintenance'}</div>
   <p>The lines starting with INFO or ERROR are the server's log; the indented lines are what the client received. The first request sent its own id, <code>asha-001</code>; <code>before_request</code> kept it in <code>g</code>, and <code>after_request</code> put it on the response and in the log line along with the time taken. Requests without an id got one from a simple counter (<code>req-1</code>, <code>req-2</code>, ...); real apps usually generate a random UUID instead, and the counter only keeps this example's output predictable. Restaurant 99 and the DELETE now get our JSON instead of HTML pages, and the 405 even lists the allowed methods. Menu 12 raised a <code>KeyError</code>; the catch-all handler logged it under request id <code>req-3</code> and gave the client only that id and a generic message. That is deliberate: sending the exception text to the client can leak file paths, SQL or other internals, while the id lets support find the real error in the log (in real code, use <code>app.logger.exception</code>, which also logs the full traceback). The catch-all handler passes Flask's own HTTP errors through unchanged, otherwise it would turn every 404 into a 500. Finally, with <code>MAINTENANCE</code> switched on, <code>before_request</code> returned a 503 and the view never ran.</p>
   <p>You will also hear the word <strong>middleware</strong>. In general it means code that sits between the server and your views and sees every request. In Flask, hooks are the usual way to do this, but there is a second, lower-level kind: <strong>WSGI middleware</strong>. Because a WSGI app is just a callable, you can wrap it in another callable that receives the raw <code>environ</code> first, does something, and then calls the real app. Flask keeps its inner WSGI app in <code>app.wsgi_app</code> so you can wrap it:</p>
@@ -484,7 +484,7 @@ def orders_page(rid):
 c = app.test_client()
 for rid in (10, 11):
     html = c.get(f"/staff/{rid}/orders").get_data(as_text=True)
-    print("\n".join(line for line in html.splitlines() if line.strip()))   # drop blank lines
+    print("\\n".join(line for line in html.splitlines() if line.strip()))   # drop blank lines
     print("-" * 40)</div>
   <div class="fx" data-lang="text">&lt;title&gt;Biteful staff&lt;/title&gt;
 &lt;h1&gt;Dosa Hut: today's orders&lt;/h1&gt;
@@ -724,7 +724,7 @@ predict_ms = (time.perf_counter() - t0) * 1000 / 100
 
 print(f"joblib.load: {load_ms:.2f} ms per call")
 print(f"predict:     {predict_ms:.2f} ms per call")</div>
-  <div class="fx" data-lang="text">joblib.load: 8.85 ms per call
+  <div class="fx" data-lang="text">joblib.load: 9.18 ms per call
 predict:     0.18 ms per call</div>
   <p>Loading even this tiny model took dozens of times longer than predicting with it, as the two numbers above show. A real model file of hundreds of megabytes can take seconds to load and a lot of memory, so loading it per request would make every checkout slow. Loading at startup has one consequence to remember: gunicorn runs several worker processes (section 09), and each process loads its own copy, so memory use is roughly the number of workers times the model's size. Two further cautions. Loading a pickle file, which joblib uses underneath, can run code hidden inside it, so load only files you produced yourself and pin the scikit-learn version used for training. And if the API computes features differently from the training code, for example miles instead of kilometres, predictions silently get worse; this is called <strong>training–serving skew</strong>, and the usual protection is to save the whole preprocessing pipeline together with the model.</p>
 
@@ -775,7 +775,7 @@ def test_eta_matches_hand_calculation(client):
     assert r.json["eta_minutes"] == pytest.approx(12.68 + 4.03 * 3.2 + 3.02 * 2, abs=0.1)</div>
   <div class="fx" data-lang="text">$ pytest -q tests/test_api.py
 ........                                                                 [100%]
-8 passed in 1.12s</div>
+8 passed in 1.22s</div>
   <p>Each dot is one passed test. There are five test functions, but the bad-order test ran once for each of its four inputs, so pytest counted 8 tests, all passing in about a second. Look at what the fixture does. It calls <code>create_app({"TESTING": True})</code>, which is the factory paying off: every test gets its own app, built with test settings. <code>TESTING</code> also tells Flask to let exceptions reach the test instead of hiding them behind a 500 page, so failures are easier to read. The fixture also empties <code>ORDERS</code>, because that dictionary is module-level state shared by every app; without clearing it, order numbers would depend on which tests happened to run first. Real projects solve the same problem with a fresh test database for each test. Inside the tests, <code>client.post(url, json=...)</code> sends a JSON body, <code>r.json</code> parses the reply, and <code>get_data(as_text=True)</code> returns the HTML of a page. The last test writes our hand calculation from section 07 into code, so if someone retrains the model and its answers drift, the test fails loudly.</p>
 
   <h2 id="fl-sync"><span class="num">09</span>The Limits: Sync Workers and Manual Validation</h2>
@@ -822,7 +822,7 @@ $ python fire.py 3
 
 $ gunicorn -w 1 --threads 3 -b 127.0.0.1:18210 slow:app
 $ python fire.py 12
-12 orders at once -&gt; 12 x 201 in 4.02 s</div>
+12 orders at once -&gt; 12 x 201 in 4.03 s</div>
   <figure class="viz"><svg viewBox="0 0 600 150" width="600">
     <text x="5" y="22" font-size="12">1 sync worker</text>
     <rect x="140" y="10" width="140" height="18" class="fb"/><rect x="280" y="10" width="140" height="18" class="ft"/><rect x="420" y="10" width="140" height="18" class="fv"/>
@@ -832,7 +832,7 @@ $ python fire.py 12
     <text x="140" y="126" font-size="11" text-anchor="middle">0 s</text><text x="280" y="126" font-size="11" text-anchor="middle">1 s</text><text x="420" y="126" font-size="11" text-anchor="middle">2 s</text><text x="560" y="126" font-size="11" text-anchor="middle">3 s</text>
     <text x="300" y="146" font-size="12" text-anchor="middle" class="tm">each colour = one order waiting on the email provider</text>
   </svg><figcaption>Top: one sync worker with one thread serves the three orders one after another (3.01 s). Bottom: three threads wait at the same time (1.01 s).</figcaption></figure>
-  <p>With one worker and one thread, the three orders were served one after another: the first customer waited 1 second, the second 2, the third 3, and the whole batch took 3.01 seconds, as the top row of the picture shows. Giving the worker 3 threads, or starting 3 worker processes, let the three waits overlap (the bottom row), and the batch finished in 1.01 seconds. But the last run shows that this only moves the limit: with 3 threads and 12 orders, the server worked through them in rounds of 3, and 12 ÷ 3 = 4 rounds of one second took 4.02 seconds. In general, a sync server can have at most <em>workers × threads</em> requests in progress at once, and every waiting request holds one of those slots. Serving 1,000 customers who are all waiting on slow services would need about 1,000 threads, each using memory. (Threads help here only because the requests are <em>waiting</em>; for CPU-heavy work such as a big model's prediction, Python's GIL lets only one thread compute at a time, so extra worker processes are what help. See <a class="xref" data-note="py_threading">Multithreading</a>.)</p>
+  <p>With one worker and one thread, the three orders were served one after another: the first customer waited 1 second, the second 2, the third 3, and the whole batch took 3.01 seconds, as the top row of the picture shows. Giving the worker 3 threads, or starting 3 worker processes, let the three waits overlap (the bottom row), and the batch finished in 1.01 seconds. But the last run shows that this only moves the limit: with 3 threads and 12 orders, the server worked through them in rounds of 3, and 12 ÷ 3 = 4 rounds of one second took 4.03 seconds. In general, a sync server can have at most <em>workers × threads</em> requests in progress at once, and every waiting request holds one of those slots. Serving 1,000 customers who are all waiting on slow services would need about 1,000 threads, each using memory. (Threads help here only because the requests are <em>waiting</em>; for CPU-heavy work such as a big model's prediction, Python's GIL lets only one thread compute at a time, so extra worker processes are what help. See <a class="xref" data-note="py_threading">Multithreading</a>.)</p>
   <p>There are two different fixes, and the rest of this track covers both. The first is to stop holding a thread while waiting: an <strong>asynchronous</strong> framework built on <strong>ASGI</strong> (WSGI's async successor) runs an event loop that can keep thousands of waiting requests on one thread and switch to whichever one is ready; that is <a class="xref" data-note="api_fastapi">FastAPI</a>. Flask 2.0 and later do accept <code>async def</code> views, but under WSGI each request still occupies a worker thread for its whole duration, so it does not raise the number of requests in progress. The second fix is to not wait at all: Asha needs order 101 confirmed in milliseconds, and the email can be sent a second later by a separate worker reading from a task queue, as shown in <a class="xref" data-note="api_production">Production Backend</a>.</p>
   <p>The second limit we have already measured: validation is manual. In section 03, 12 of the 23 lines in <code>create_order</code> were checks, the endpoint reported only the first of two mistakes, <code>?min_rating=high</code> was silently ignored, and nothing describes to other developers what the endpoint accepts unless someone writes that documentation by hand. Extensions such as marshmallow help, but they are extra pieces you choose and wire in yourself. The table summarises where Flask stands:</p>
   <table class="tbl">
@@ -1005,7 +1005,7 @@ def create_app(config=None):
     <tr><td>ETA model</td><td>12.68 + 4.03 × km + 3.02 × items; 3.2 km, 2 items → 31.6 min</td></tr>
     <tr><td>Load vs predict</td><td>loading is dozens of times slower than predicting (approximate timings)</td></tr>
     <tr><td>3 orders, 1 s wait each</td><td>1 worker: 3.01 s; 3 threads or 3 workers: 1.01 s</td></tr>
-    <tr><td>12 orders, 3 threads</td><td>4.02 s = ceil(12 / 3) × 1 s</td></tr>
+    <tr><td>12 orders, 3 threads</td><td>4.03 s = ceil(12 / 3) × 1 s</td></tr>
   </table>
   <h3>Gotchas</h3>
   <ul>
@@ -1037,7 +1037,7 @@ def create_app(config=None):
   <details class="qa"><summary><span class="qmark">Q</span>How would you serve a scikit-learn model with Flask?</summary><div class="qa-body">Train offline and save the whole pipeline, the feature order and a version with joblib. Load it once at startup in the app factory, not per request. In the endpoint, validate the input, build the feature array in the saved order, call <code>predict</code>, convert NumPy values with <code>float()</code> or <code>.tolist()</code>, and return the prediction with the model version. Add a health endpoint and tests that pin known predictions.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>You run <code>gunicorn -w 4</code> with a 2 GB model loaded at startup. How much memory do you need, and what can you do about it?</summary><div class="qa-body">Each worker is a separate process with its own copy, so roughly 4 × 2 GB plus overhead. Options are fewer workers with threads (if prediction releases the GIL or requests mostly wait), gunicorn's <code>--preload</code>, which loads the model before forking so workers initially share its memory pages (only partly in practice, because Python's reference counting writes to objects), a smaller or quantised model, or moving the model to a dedicated model server that the API calls.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>How do you test a Flask endpoint without starting a server?</summary><div class="qa-body">Create the app with test settings, for example <code>create_app({"TESTING": True})</code>, and call <code>app.test_client()</code>. The client calls the app in-process: <code>client.post("/v1/orders", json={...})</code> returns a response whose <code>status_code</code>, <code>json</code> and headers you assert on. Put the client in a pytest fixture, reset shared state there, and use <code>parametrize</code> for lists of bad inputs.</div></details>
-  <details class="qa"><summary><span class="qmark">Q</span>A view waits 1 second on an external API. With <code>gunicorn -w 1</code>, how long do 3 simultaneous requests take? With <code>-w 1 --threads 3</code> and 12 requests?</summary><div class="qa-body">One sync worker with one thread serves them one after another, so about 3 seconds (measured 3.01 s). With 3 threads, 3 requests can wait at once, so 12 requests take 4 rounds, about 4 seconds (measured 4.02 s). In general, time ≈ ceil(requests ÷ (workers × threads)) × wait.</div></details>
+  <details class="qa"><summary><span class="qmark">Q</span>A view waits 1 second on an external API. With <code>gunicorn -w 1</code>, how long do 3 simultaneous requests take? With <code>-w 1 --threads 3</code> and 12 requests?</summary><div class="qa-body">One sync worker with one thread serves them one after another, so about 3 seconds (measured 3.01 s). With 3 threads, 3 requests can wait at once, so 12 requests take 4 rounds, about 4 seconds (measured 4.03 s). In general, time ≈ ceil(requests ÷ (workers × threads)) × wait.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>How do you choose the number of gunicorn workers and threads?</summary><div class="qa-body">A common starting point is (2 × CPU cores) + 1 workers, then adjust by measurement. Processes give true parallelism for CPU-heavy work, because each has its own GIL, but each costs memory, including its own copy of any model. Threads are cheap and help when requests mostly wait on I/O. If requests spend most of their time waiting, consider an async framework or moving the slow work to a task queue instead.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Does writing <code>async def</code> views make Flask handle more concurrent requests?</summary><div class="qa-body">Not really. Flask 2.0+ accepts async views, but under WSGI each request still occupies a worker thread for its whole duration; Flask runs the coroutine in an event loop for that one request. It lets you use async libraries and run several awaits in parallel inside one request, but the number of requests in progress is still workers × threads. For many concurrent waiting requests, use an ASGI framework such as FastAPI.</div></details>
   <details class="qa"><summary><span class="qmark">Q</span>Flask or FastAPI: how do you decide?</summary><div class="qa-body">Choose Flask for existing Flask codebases, server-rendered HTML pages, small internal tools and quick prototypes, where its simplicity and mature ecosystem shine. Choose FastAPI for new JSON APIs with a lot of input validation, many slow external calls such as LLM or database requests, or when you want automatic OpenAPI documentation. For CPU-heavy model inference the framework matters less than workers, batching and hardware.</div></details>
