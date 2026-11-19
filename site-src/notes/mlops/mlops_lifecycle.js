@@ -145,8 +145,8 @@ print("rerun, no seed, same file   :", [notebook_run(df, None) for _ in range(3)
 week2 = pd.read_csv("../exports/orders_2200.csv")
 print("rerun, no seed, new export  :", notebook_run(week2, None), f"({len(week2)} rows)")</div>
   <div class="fx" data-lang="text">original, seed 42, 2000 rows: 2.44
-rerun, no seed, same file   : [2.73, 2.53, 2.52]
-rerun, no seed, new export  : 2.48 (2200 rows)</div>
+rerun, no seed, same file   : [2.57, 2.62, 2.47]
+rerun, no seed, new export  : 2.55 (2200 rows)</div>
   <p>The same code produced 2.44, then three different numbers on the very same file, then yet another on the new export. Which one is "the model"? Nobody can say, because the notebook never recorded what produced its number. Several ingredients went into Asha's 2.44, and none of them were written down: the exact data file, the random seed, the settings (100 trees? depth 8 or 12? Ravi has to read cell 14 to find out), the order in which cells were run (a notebook lets you run cell 9 before cell 4, and a deleted cell can still have changed the memory), and the library versions on her laptop. Without them, 2.44 is an anecdote rather than a fact, and a "small improvement" next week could be pure luck: the reruns above differ from each other by about as much as many real improvements.</p>
   <p>Think of a home cook who makes a wonderful biryani without writing anything down. Asked to make it again for a wedding of five hundred guests, they cannot: they do not know exactly how much of each spice went in, which rice they used, or how long it cooked. A restaurant kitchen works from written recipes with exact quantities so that any cook can make the same dish on any day. A model is <strong>reproducible</strong> when anyone can rebuild exactly the same model later from recorded inputs: the code version, the data version, the settings including the seed, and the software environment. Making Biteful's model reproducible, and keeping it healthy once it is live, is what the rest of this note is about.</p>
 
@@ -323,7 +323,7 @@ $ dvc add data/orders.csv
 
 To track the changes with git, run:
 
-	git add data/.gitignore data/orders.csv.dvc
+	git add data/orders.csv.dvc data/.gitignore
 
 To enable auto staging, run:
 
@@ -540,12 +540,12 @@ Key 'max_dept' is not in struct
 
 Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.
 $ python train.py --multirun model.max_depth=4,8,12
-[2026-11-19 06:39:28,877][HYDRA] Launching 3 jobs locally
-[2026-11-19 06:39:28,878][HYDRA] 	#0 : model.max_depth=4
+[2026-11-19 06:50:37,849][HYDRA] Launching 3 jobs locally
+[2026-11-19 06:50:37,849][HYDRA] 	#0 : model.max_depth=4
 trees=100 depth=4 seed=42 -&gt; {'mae': 3.708, 'r2': 0.808}
-[2026-11-19 06:39:29,108][HYDRA] 	#1 : model.max_depth=8
+[2026-11-19 06:50:38,062][HYDRA] 	#1 : model.max_depth=8
 trees=100 depth=8 seed=42 -&gt; {'mae': 2.611, 'r2': 0.902}
-[2026-11-19 06:39:29,469][HYDRA] 	#2 : model.max_depth=12
+[2026-11-19 06:50:38,302][HYDRA] 	#2 : model.max_depth=12
 trees=100 depth=12 seed=42 -&gt; {'mae': 2.71, 'r2': 0.892}
 $ ls multirun/*/*/
 0
@@ -553,10 +553,10 @@ $ ls multirun/*/*/
 2
 multirun.yaml
 $ tail -n +1 outputs/*/*/.hydra/overrides.yaml
-==&gt; outputs/2026-11-19/06-39-22/.hydra/overrides.yaml &lt;==
+==&gt; outputs/2026-11-19/06-50-32/.hydra/overrides.yaml &lt;==
 []
 
-==&gt; outputs/2026-11-19/06-39-24/.hydra/overrides.yaml &lt;==
+==&gt; outputs/2026-11-19/06-50-34/.hydra/overrides.yaml &lt;==
 - model.max_depth=4
 - seed=1</div>
   <p>Plain <code>python train.py</code> uses the file as written: depth 8, MAE 2.611, the same as the pipeline's result. <code>model.max_depth=4 seed=1</code> overrides two settings for one run without touching any file (MAE 3.659). The third command contains a typo, <code>max_dept</code>, and Hydra refuses it: its configs are "structs", meaning only keys that exist in the file may be set. Without that check the run would silently use depth 8 and Ravi would believe he had tested depth 4. If you really want to add a new key, Hydra asks you to say so explicitly with a <code>+</code> prefix.</p>
@@ -901,7 +901,7 @@ except ValidationError as e:
 ValidationError: max_dept - Extra inputs are not permitted</div>
   <p>The person meant depth 4, but <code>cfg.get("max_depth", 8)</code> could not find that key, so the run quietly used 8, and any conclusion drawn from it is wrong. A strict schema (Pydantic with <code>extra="forbid"</code>, or Hydra's struct configs) turns the typo into an error before training starts.</p>
   <p>A third mistake is committing a new data pointer and forgetting <code>dvc push</code>. Git happily records the pointer, but the bytes it names exist only on your laptop:</p>
-  <div class="fx" data-lang="text"># Asha appends an order, records the new pointer in Git, pushes the code... and forgets dvc push
+  <div class="fx" data-lang="text"># Asha appends an order, commits the new pointer to Git... and forgets dvc push
 $ echo "4.0,2,0,Chai Stop,25.3" &gt;&gt; data/orders.csv
 $ dvc add -q data/orders.csv
 $ git commit -qam "data v3: one more order"
@@ -914,9 +914,9 @@ $ git clone -q . ../ravi-laptop
 $ cd ../ravi-laptop &amp;&amp; dvc pull
 Everything is up to date.
 WARNING: Some of the cache files do not exist neither locally nor on remote. Missing cache files:
+md5: 751c865d03fe0685b28535660265bd3e
 md5: 8f8aaeb3e1c8a5e0a75633539643b8c7
 md5: 2a0b216576e79f44117901c48e4fc167
-md5: 751c865d03fe0685b28535660265bd3e
 ERROR: failed to pull data from the cloud - Checkout failed for following targets:
 data/orders.csv
 models/model.joblib
